@@ -1,0 +1,46 @@
+---
+apiVersion: node.k8s.io/v1
+kind: RuntimeClass
+metadata:
+  name: gvisor
+handler: runsc
+scheduling:
+  nodeSelector:
+    runtime: gvisor
+  tolerations:
+    - key: node.kubernetes.io/unschedulable
+      operator: Exists
+      effect: NoSchedule
+---
+# Example usage in a Pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cve-matter-analysis
+  labels:
+    app: cve-matter
+    security: blue-team
+spec:
+  runtimeClassName: gvisor
+  containers:
+    - name: cve-matter
+      image: cve-matter-analysis:cpu
+      command: ["cve-matter", "--help"]
+      resources:
+        limits:
+          memory: "2Gi"
+          cpu: "1000m"
+        requests:
+          memory: "1Gi"
+          cpu: "500m"
+      volumeMounts:
+        - name: config
+          mountPath: /app/config
+        - name: data
+          mountPath: /app/data
+  volumes:
+    - name: config
+      configMap:
+        name: cve-matter-config
+    - name: data
+      emptyDir: {}

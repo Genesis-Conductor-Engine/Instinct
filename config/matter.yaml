@@ -1,0 +1,52 @@
+# CVE Matter-Analysis OS Configuration
+
+# NVD API Configuration
+nvd:
+  api_key: null  # Set to your NVD API key for higher rate limits
+  rate_limit_delay: 6.0  # Seconds between requests (6s without key, 0.6s with key)
+  max_results: 100
+
+# Alignment Configuration
+alignment:
+  method: procrustes  # procrustes or cca
+  n_components: 2  # For CCA
+
+# Arbiter Configuration
+arbiter:
+  n_folds: 5  # Cross-validation folds
+  base_learners:
+    - random_forest
+    - gradient_boosting
+    - logistic_regression
+  meta_learner: logistic_regression
+
+# Refractor Configuration
+refractors:
+  epsilon_min: 0.001
+  epsilon_max: 0.1
+  n_steps: 20
+  use_gpu: false  # Set to true if CUDA is available
+
+# Evidence Configuration
+evidence:
+  criteria:
+    - bic
+    - waic
+  min_samples: 10
+
+# Logging
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# Security Settings
+security:
+  # This is a defensive blue-team tool only
+  # No offensive capabilities or cryptographic breaking
+  purpose: defensive_analysis
+  data_handling: confidential
+  
+# Output Configuration
+output:
+  format: json
+  indent: 2

@@ -1,0 +1,110 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: cve-matter-epsilon-sweep
+  namespace: argo
+spec:
+  entrypoint: epsilon-sweep
+  arguments:
+    parameters:
+      - name: epsilon-min
+        value: "0.001"
+      - name: epsilon-max
+        value: "0.1"
+      - name: n-steps
+        value: "20"
+      - name: input-data
+        value: "/data/cve_data.json"
+  
+  # GPU node selector for GPU-accelerated workloads
+  nodeSelector:
+    cloud.google.com/gke-accelerator: nvidia-tesla-t4
+  
+  tolerations:
+    - key: nvidia.com/gpu
+      operator: Exists
+      effect: NoSchedule
+  
+  templates:
+    - name: epsilon-sweep
+      steps:
+        - - name: prepare-data
+            template: data-preparation
+        - - name: sweep-epsilon
+            template: epsilon-calculation
+            arguments:
+              parameters:
+                - name: epsilon-min
+                  value: "{{workflow.parameters.epsilon-min}}"
+                - name: epsilon-max
+                  value: "{{workflow.parameters.epsilon-max}}"
+                - name: n-steps
+                  value: "{{workflow.parameters.n-steps}}"
+        - - name: aggregate-results
+            template: result-aggregation
+    
+    - name: data-preparation
+      container:
+        image: cve-matter-analysis:cpu
+        command: ["cve-matter", "ingest"]
+        args:
+          - "--output"
+          - "/data/cve_data.json"
+          - "--source"
+          - "nvd"
+        volumeMounts:
+          - name: workdir
+            mountPath: /data
+    
+    - name: epsilon-calculation
+      inputs:
+        parameters:
+          - name: epsilon-min
+          - name: epsilon-max
+          - name: n-steps
+      container:
+        image: cve-matter-analysis:cuda
+        command: ["cve-matter", "refract"]
+        args:
+          - "--input"
+          - "/data/cve_data.json"
+          - "--output"
+          - "/data/epsilon_results.json"
+          - "--epsilon-range"
+          - "{{inputs.parameters.epsilon-min}}"
+          - "{{inputs.parameters.epsilon-max}}"
+          - "--use-gpu"
+        volumeMounts:
+          - name: workdir
+            mountPath: /data
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+            memory: "8Gi"
+            cpu: "4"
+          requests:
+            nvidia.com/gpu: 1
+            memory: "4Gi"
+            cpu: "2"
+    
+    - name: result-aggregation
+      container:
+        image: cve-matter-analysis:cpu
+        command: ["sh", "-c"]
+        args:
+          - |
+            echo "Epsilon sweep completed"
+            cat /data/epsilon_results.json
+        volumeMounts:
+          - name: workdir
+            mountPath: /data
+  
+  volumeClaimTemplates:
+    - metadata:
+        name: workdir
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
