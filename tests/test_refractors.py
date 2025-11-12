@@ -1,6 +1,4 @@
 """Tests for epsilon refractor module."""
-import pytest
-from pathlib import Path
 from cve_matter.refractors.epsilon import EpsilonCalculator
 
 
@@ -22,15 +20,15 @@ def test_epsilon_sweep(temp_data_file, temp_output_dir):
     """Test epsilon sweep computation."""
     calc = EpsilonCalculator()
     result = calc.compute_epsilon_sweep(temp_data_file)
-    
+
     assert result is not None
     assert 'status' in result
-    
+
     if result['status'] == 'success':
         assert 'epsilon_range' in result
         assert 'stability_scores' in result
         assert 'optimal_epsilon' in result
-    
+
     # Save results
     output_path = temp_output_dir / 'epsilon_results.json'
     calc.save_results(result, output_path)
@@ -46,7 +44,7 @@ def test_epsilon_sweep_custom_range(temp_data_file):
         epsilon_max=0.5,
         n_steps=10
     )
-    
+
     assert result is not None
     if result['status'] == 'success':
         assert result['epsilon_range'] == [0.01, 0.5]

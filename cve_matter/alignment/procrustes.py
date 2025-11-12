@@ -1,45 +1,46 @@
 """Procrustes alignment analysis module."""
-import numpy as np
 import json
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any
+
+import numpy as np
 from scipy.spatial import procrustes
 
 
 class ProcrustesAlignment:
     """Perform Procrustes analysis for shape alignment in CVE feature space.
-    
+
     This module provides statistical alignment methods for comparing
     vulnerability patterns across different datasets or time periods.
     Defensive analysis only - no offensive capabilities.
     """
-    
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+
+    def __init__(self, config: dict[str, Any] | None = None):
         """Initialize Procrustes alignment with configuration.
-        
+
         Args:
             config: Optional configuration dictionary
         """
         self.config = config or {}
         self.alignment_params = self.config.get('alignment', {})
-        
-    def align_from_file(self, input_path: Path) -> Dict[str, Any]:
+
+    def align_from_file(self, input_path: Path) -> dict[str, Any]:
         """Perform Procrustes alignment on CVE data from file.
-        
+
         Args:
             input_path: Path to input JSON file with CVE data
-            
+
         Returns:
             Dictionary with alignment results
         """
         with open(input_path) as f:
             data = json.load(f)
-            
+
         cves = data.get('cves', [])
-        
+
         # Extract feature matrices for alignment
         features = self._extract_features(cves)
-        
+
         # Perform alignment if we have enough data
         if len(features) >= 2:
             result = self._perform_alignment(features)
@@ -48,15 +49,15 @@ class ProcrustesAlignment:
                 'status': 'insufficient_data',
                 'message': 'Need at least 2 data points for alignment'
             }
-            
+
         return result
-    
+
     def _extract_features(self, cves: list) -> np.ndarray:
         """Extract feature matrix from CVE records.
-        
+
         Args:
             cves: List of CVE records
-            
+
         Returns:
             NumPy array of features
         """
@@ -70,15 +71,15 @@ class ProcrustesAlignment:
                 hash(cve.get('severity', '')) % 100,  # Simple categorical encoding
             ]
             features.append(feature_vec)
-            
+
         return np.array(features)
-    
-    def _perform_alignment(self, features: np.ndarray) -> Dict[str, Any]:
+
+    def _perform_alignment(self, features: np.ndarray) -> dict[str, Any]:
         """Perform Procrustes alignment on feature matrices.
-        
+
         Args:
             features: Feature matrix
-            
+
         Returns:
             Alignment results
         """
@@ -86,11 +87,11 @@ class ProcrustesAlignment:
         mid = len(features) // 2
         matrix1 = features[:mid]
         matrix2 = features[mid:2*mid]  # Match dimensions
-        
+
         try:
             # Perform Procrustes analysis
             mtx1, mtx2, disparity = procrustes(matrix1, matrix2)
-            
+
             result = {
                 'status': 'success',
                 'disparity': float(disparity),
@@ -105,12 +106,12 @@ class ProcrustesAlignment:
                 'status': 'error',
                 'message': str(e)
             }
-            
+
         return result
-    
-    def save_results(self, result: Dict[str, Any], output_path: Path) -> None:
+
+    def save_results(self, result: dict[str, Any], output_path: Path) -> None:
         """Save alignment results to JSON file.
-        
+
         Args:
             result: Alignment result dictionary
             output_path: Path to output file

@@ -1,6 +1,4 @@
 """Tests for NVD ingestion module."""
-import pytest
-from pathlib import Path
 from cve_matter.ingest import NVDIngestor
 
 
@@ -44,16 +42,16 @@ def test_save_data(temp_output_dir):
     """Test saving CVE data."""
     ingestor = NVDIngestor()
     cves = ingestor.fetch_cves(max_results=5)
-    
+
     output_path = temp_output_dir / 'test_cves.json'
     ingestor.save_data(cves, output_path)
-    
+
     assert output_path.exists()
-    
+
     import json
     with open(output_path) as f:
         saved_data = json.load(f)
-    
+
     assert 'metadata' in saved_data
     assert 'cves' in saved_data
     assert len(saved_data['cves']) == len(cves)

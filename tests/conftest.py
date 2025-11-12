@@ -1,8 +1,9 @@
 """Test configuration and fixtures."""
-import pytest
 import json
-from pathlib import Path
 import tempfile
+from pathlib import Path
+
+import pytest
 
 
 @pytest.fixture
@@ -34,9 +35,9 @@ def temp_data_file(sample_cve_data):
     with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
         json.dump(sample_cve_data, f)
         temp_path = Path(f.name)
-    
+
     yield temp_path
-    
+
     # Cleanup
     if temp_path.exists():
         temp_path.unlink()

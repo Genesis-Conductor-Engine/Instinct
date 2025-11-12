@@ -1,45 +1,46 @@
 """Canonical Correlation Analysis (CCA) alignment module."""
-import numpy as np
 import json
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any
+
+import numpy as np
 from sklearn.cross_decomposition import CCA
 
 
 class CCAAlignment:
     """Perform Canonical Correlation Analysis for multivariate alignment.
-    
+
     CCA finds linear combinations of features that maximize correlation
     between datasets. Useful for identifying common vulnerability patterns.
     Defensive analysis only.
     """
-    
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+
+    def __init__(self, config: dict[str, Any] | None = None):
         """Initialize CCA alignment with configuration.
-        
+
         Args:
             config: Optional configuration dictionary
         """
         self.config = config or {}
         self.n_components = self.config.get('alignment', {}).get('n_components', 2)
-        
-    def align_from_file(self, input_path: Path) -> Dict[str, Any]:
+
+    def align_from_file(self, input_path: Path) -> dict[str, Any]:
         """Perform CCA alignment on CVE data from file.
-        
+
         Args:
             input_path: Path to input JSON file with CVE data
-            
+
         Returns:
             Dictionary with alignment results
         """
         with open(input_path) as f:
             data = json.load(f)
-            
+
         cves = data.get('cves', [])
-        
+
         # Extract feature matrices
         features = self._extract_features(cves)
-        
+
         # Perform CCA alignment
         if len(features) >= 4:  # Need sufficient samples
             result = self._perform_cca(features)
@@ -48,15 +49,15 @@ class CCAAlignment:
                 'status': 'insufficient_data',
                 'message': 'Need at least 4 data points for CCA'
             }
-            
+
         return result
-    
+
     def _extract_features(self, cves: list) -> np.ndarray:
         """Extract feature matrix from CVE records.
-        
+
         Args:
             cves: List of CVE records
-            
+
         Returns:
             NumPy array of features
         """
@@ -69,15 +70,15 @@ class CCAAlignment:
                 hash(cve.get('severity', '')) % 100,
             ]
             features.append(feature_vec)
-            
+
         return np.array(features)
-    
-    def _perform_cca(self, features: np.ndarray) -> Dict[str, Any]:
+
+    def _perform_cca(self, features: np.ndarray) -> dict[str, Any]:
         """Perform CCA on feature matrices.
-        
+
         Args:
             features: Feature matrix
-            
+
         Returns:
             CCA results
         """
@@ -85,18 +86,18 @@ class CCAAlignment:
         mid = len(features) // 2
         X = features[:mid]
         Y = features[mid:2*mid]
-        
+
         try:
             # Fit CCA
             cca = CCA(n_components=min(self.n_components, min(X.shape[1], Y.shape[1])))
             X_c, Y_c = cca.fit_transform(X, Y)
-            
+
             # Compute correlations
             correlations = [
                 np.corrcoef(X_c[:, i], Y_c[:, i])[0, 1]
                 for i in range(X_c.shape[1])
             ]
-            
+
             result = {
                 'status': 'success',
                 'n_components': X_c.shape[1],
@@ -109,12 +110,12 @@ class CCAAlignment:
                 'status': 'error',
                 'message': str(e)
             }
-            
+
         return result
-    
-    def save_results(self, result: Dict[str, Any], output_path: Path) -> None:
+
+    def save_results(self, result: dict[str, Any], output_path: Path) -> None:
         """Save CCA results to JSON file.
-        
+
         Args:
             result: CCA result dictionary
             output_path: Path to output file

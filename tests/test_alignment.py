@@ -1,8 +1,6 @@
 """Tests for alignment modules."""
-import pytest
-from pathlib import Path
-from cve_matter.alignment.procrustes import ProcrustesAlignment
 from cve_matter.alignment.cca import CCAAlignment
+from cve_matter.alignment.procrustes import ProcrustesAlignment
 
 
 def test_procrustes_initialization():
@@ -15,10 +13,10 @@ def test_procrustes_align_from_file(temp_data_file, temp_output_dir):
     """Test Procrustes alignment from file."""
     aligner = ProcrustesAlignment()
     result = aligner.align_from_file(temp_data_file)
-    
+
     assert result is not None
     assert 'status' in result
-    
+
     # Save results
     output_path = temp_output_dir / 'procrustes_result.json'
     aligner.save_results(result, output_path)
@@ -36,10 +34,10 @@ def test_cca_align_from_file(temp_data_file, temp_output_dir):
     """Test CCA alignment from file."""
     aligner = CCAAlignment()
     result = aligner.align_from_file(temp_data_file)
-    
+
     assert result is not None
     assert 'status' in result
-    
+
     # Save results
     output_path = temp_output_dir / 'cca_result.json'
     aligner.save_results(result, output_path)

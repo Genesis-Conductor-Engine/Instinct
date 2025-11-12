@@ -1,6 +1,4 @@
 """Tests for super-learner arbiter module."""
-import pytest
-from pathlib import Path
 from cve_matter.arbiter.super_learner import SuperLearner
 
 
@@ -22,14 +20,14 @@ def test_super_learner_fit_predict(temp_data_file, temp_output_dir):
     """Test SuperLearner fit and predict."""
     learner = SuperLearner()
     result = learner.fit_predict_from_file(temp_data_file)
-    
+
     assert result is not None
     assert 'status' in result
-    
+
     if result['status'] == 'success':
         assert 'cv_accuracy' in result
         assert 'predictions' in result
-    
+
     # Save predictions
     output_path = temp_output_dir / 'predictions.json'
     learner.save_predictions(result, output_path)
