@@ -1,0 +1,99 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: policytriggers.cve-matter.security.io
+spec:
+  group: cve-matter.security.io
+  names:
+    kind: PolicyTrigger
+    listKind: PolicyTriggerList
+    plural: policytriggers
+    singular: policytrigger
+    shortNames:
+      - pt
+  scope: Namespaced
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                severity:
+                  type: string
+                  enum: ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+                  description: Minimum CVE severity to trigger policy
+                action:
+                  type: string
+                  enum: ["alert", "block", "quarantine"]
+                  description: Action to take when triggered
+                threshold:
+                  type: number
+                  description: CVSS score threshold
+                  minimum: 0.0
+                  maximum: 10.0
+                targets:
+                  type: array
+                  items:
+                    type: string
+                  description: List of target namespaces or workloads
+                notificationChannels:
+                  type: array
+                  items:
+                    type: string
+                  description: Notification channels (e.g., slack, email)
+              required:
+                - severity
+                - action
+                - threshold
+            status:
+              type: object
+              properties:
+                lastTriggered:
+                  type: string
+                  format: date-time
+                triggeredCount:
+                  type: integer
+                state:
+                  type: string
+                  enum: ["active", "disabled", "error"]
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Severity
+          type: string
+          jsonPath: .spec.severity
+        - name: Action
+          type: string
+          jsonPath: .spec.action
+        - name: Threshold
+          type: number
+          jsonPath: .spec.threshold
+        - name: State
+          type: string
+          jsonPath: .status.state
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+---
+# Example PolicyTrigger resource
+apiVersion: cve-matter.security.io/v1
+kind: PolicyTrigger
+metadata:
+  name: critical-cve-alert
+  namespace: default
+spec:
+  severity: CRITICAL
+  action: alert
+  threshold: 9.0
+  targets:
+    - production
+    - staging
+  notificationChannels:
+    - slack-security
+    - email-soc

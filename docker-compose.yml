@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  cve-matter-cpu:
+    build:
+      context: .
+      target: cpu
+    image: cve-matter-analysis:cpu
+    container_name: cve-matter-cpu
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: --help
+
+  cve-matter-cuda:
+    build:
+      context: .
+      target: cuda
+    image: cve-matter-analysis:cuda
+    container_name: cve-matter-cuda
+    runtime: nvidia
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+    environment:
+      - PYTHONUNBUFFERED=1
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command: --help
