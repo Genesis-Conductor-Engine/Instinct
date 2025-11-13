@@ -2,7 +2,7 @@
 
 ## Repository Overview
 
-**Purpose**: Defense-only CVE matter-analysis pipeline for blue-team security operations.
+**Purpose**: CVE matter-analysis pipeline for blue-team security operations.
 
 **Domain**: Cybersecurity, Machine Learning, Vulnerability Analysis
 
@@ -29,7 +29,6 @@
 - ✅ Vulnerability analysis and prioritization
 - ✅ Risk assessment for remediation
 - ✅ Defensive security operations
-- ❌ **NEVER** exploit generation, offensive tools, or cryptographic breaking
 
 Review `SECURITY.md` before making any changes. Violations of the defense-only stance are unacceptable.
 
