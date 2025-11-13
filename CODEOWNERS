@@ -1,0 +1,54 @@
+# Code Owners
+
+# This file defines code ownership for the CVE Matter-Analysis OS repository.
+# Code owners are automatically requested for review when someone opens a pull request
+# that modifies code in a directory they own.
+
+# Default owners for everything in the repo
+* @security-team @cve-analysis-team
+
+# Infrastructure and deployment
+/k8s/ @sre-team @security-team
+/terraform/ @sre-team @infrastructure-team
+/argo/ @sre-team @mlops-team
+/.github/workflows/ @devops-team @sre-team
+/docker/ @devops-team @sre-team
+
+# Security-sensitive files and configurations
+/SECURITY.md @security-team
+/CODEOWNERS @security-team
+/.github/workflows/codeql.yml @security-team
+/.github/workflows/container-scan.yml @security-team
+
+# Prompts and system descriptions (high-value IP)
+/prompts/ @ml-engineering-team @security-team
+/capsules/ @ml-engineering-team @architecture-team
+
+# Core pipeline modules
+/src/ingest/ @backend-team @data-engineering-team
+/src/alignment/ @ml-engineering-team @research-team
+/src/models/ @ml-engineering-team @data-science-team
+/src/refractors/ @ml-engineering-team @research-team
+/src/evaluation/ @ml-engineering-team @research-team
+/src/cuda/ @ml-engineering-team @performance-team
+/src/bridge/ @backend-team @sre-team
+
+# Tests
+/tests/ @qa-team @backend-team
+
+# Scripts and utilities
+/scripts/ @devops-team @backend-team
+
+# Documentation
+/docs/ @tech-writing-team
+/README.md @tech-writing-team @architecture-team
+
+# Configuration files
+/config/ @sre-team @security-team
+/requirements.txt @backend-team @security-team
+/requirements-dev.txt @backend-team
+/pyproject.toml @backend-team
+/setup.py @backend-team
+
+# Copilot agent configuration
+/.copilot/ @ai-team @architecture-team
