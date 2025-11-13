@@ -54,11 +54,6 @@ resource "google_container_cluster" "primary" {
     workload_pool = "${var.project_id}.svc.id.goog"
   }
 
-  # Enable gVisor (Sandbox) support
-  sandbox_config {
-    sandbox_type = "gvisor"
-  }
-
   # Security features
   enable_shielded_nodes = true
   

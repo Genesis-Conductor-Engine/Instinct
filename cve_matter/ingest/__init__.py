@@ -1,5 +1,6 @@
 """NVD CVE data ingestion module."""
 import json
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -71,7 +72,7 @@ class NVDIngestor:
                     cves.append(cve_data)
 
         except requests.exceptions.RequestException as e:
-            print(f"Warning: Failed to fetch from NVD API: {e}")
+            print(f"Warning: Failed to fetch from NVD API: {e}", file=sys.stderr)
             # Return mock data for testing/development
             cves = self._generate_mock_data(max_results)
 

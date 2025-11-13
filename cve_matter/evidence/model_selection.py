@@ -24,7 +24,7 @@ class EvidenceAnalyzer:
         self.config = config or {}
 
     def compute_evidence_from_file(self, input_path: Path,
-                                   criteria: list[str] = ['bic', 'waic']) -> dict[str, Any]:
+                                   criteria: list[str] | None = None) -> dict[str, Any]:
         """Compute model evidence from CVE data file.
 
         Args:
@@ -34,6 +34,9 @@ class EvidenceAnalyzer:
         Returns:
             Dictionary with evidence analysis results
         """
+        if criteria is None:
+            criteria = ['bic', 'waic']
+            
         with open(input_path) as f:
             data = json.load(f)
 

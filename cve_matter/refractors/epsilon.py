@@ -1,5 +1,6 @@
 """Epsilon refractor module for model refinement."""
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -31,7 +32,7 @@ class EpsilonCalculator:
         self.use_gpu = use_gpu and CUDA_AVAILABLE
 
         if use_gpu and not CUDA_AVAILABLE:
-            print("Warning: CUDA not available, falling back to CPU")
+            print("Warning: CUDA not available, falling back to CPU", file=sys.stderr)
             self.use_gpu = False
 
     def compute_epsilon_sweep(self, input_path: Path,
@@ -106,31 +107,51 @@ class EpsilonCalculator:
         try:
             epsilon_values = np.linspace(epsilon_min, epsilon_max, n_steps)
             stability_scores = []
+            variance_scores = []
 
             if self.use_gpu:
                 features_gpu = cp.asarray(features)
 
             for epsilon in epsilon_values:
-                # Compute stability metric with epsilon perturbation
-                if self.use_gpu:
-                    noise = cp.random.randn(*features_gpu.shape) * epsilon
-                    perturbed = features_gpu + noise
-                    stability = float(cp.mean(cp.abs(perturbed - features_gpu)))
-                else:
-                    noise = np.random.randn(*features.shape) * epsilon
-                    perturbed = features + noise
-                    stability = float(np.mean(np.abs(perturbed - features)))
-
+                # Compute stability metric using prediction variance under perturbation
+                # Run multiple perturbations to measure consistency
+                n_trials = 10
+                perturbed_samples = []
+                
+                for _ in range(n_trials):
+                    if self.use_gpu:
+                        noise = cp.random.randn(*features_gpu.shape) * epsilon
+                        perturbed = features_gpu + noise
+                        perturbed_samples.append(cp.asnumpy(perturbed))
+                    else:
+                        noise = np.random.randn(*features.shape) * epsilon
+                        perturbed = features + noise
+                        perturbed_samples.append(perturbed)
+                
+                # Measure variance across perturbed samples (instability indicator)
+                perturbed_array = np.array(perturbed_samples)
+                variance = float(np.mean(np.var(perturbed_array, axis=0)))
+                variance_scores.append(variance)
+                
+                # Normalized stability score (inverse of variance, normalized by epsilon)
+                # Higher score = more stable
+                stability = float(1.0 / (1.0 + variance / (epsilon + 1e-10)))
                 stability_scores.append(stability)
 
+            # Find optimal epsilon (highest stability score)
+            optimal_idx = int(np.argmax(stability_scores))
+            
             result = {
                 'status': 'success',
                 'epsilon_range': [float(epsilon_min), float(epsilon_max)],
                 'n_steps': n_steps,
                 'epsilon_values': epsilon_values.tolist(),
                 'stability_scores': stability_scores,
+                'variance_scores': variance_scores,
                 'gpu_used': self.use_gpu,
-                'optimal_epsilon': float(epsilon_values[np.argmin(stability_scores)]),
+                'optimal_epsilon': float(epsilon_values[optimal_idx]),
+                'optimal_stability': float(stability_scores[optimal_idx]),
+                'method': 'prediction_variance',
             }
         except Exception as e:
             result = {
