@@ -26,6 +26,8 @@ jobs:
     
     # Only run on main branch pushes or manual triggers
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
     
     steps:
       - name: Checkout code

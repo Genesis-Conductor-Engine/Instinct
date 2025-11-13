@@ -25,6 +25,8 @@ jobs:
   validate:
     name: Validate Capsules
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     steps:
       - name: Checkout code
