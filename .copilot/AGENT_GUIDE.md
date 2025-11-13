@@ -351,10 +351,24 @@ kubectl get pods -n cve-analysis
 | Refractors | `src/refractors/epsilon.py` | Distributional shift detection |
 | Evidence | `src/evaluation/evidence.py` | Bayesian evidence calculation |
 
+## Configured Copilot Agents
+
+This repository has specialized Copilot agents, each optimized for specific roles:
+
+- **instinct-architect** (OpenAI gpt-5) – Repo-wide architect & H-MOC/LID-LIFT planner. Use for high-level design decisions and architectural planning.
+- **instinct-codesmith** (Mistral Codestral 25.01) – Core code & infra implementer. Use for Python, CUDA, Kubernetes, Argo, Terraform, and USB OS scripts.
+- **instinct-secops** (OpenAI o1-mini) – Security, CVE, and policy specialist. Use for security reviews, vulnerability management, and policy enforcement.
+- **instinct-webhook** (OpenAI GPT-4.1-mini) – Webhooks and orchestration glue. Use for admission webhooks, HTTP APIs, and integration services.
+- **instinct-docs** (Meta Llama-3.3-70B-Instruct) – Documentation and runbooks. Use for maintaining README, SECURITY.md, operational guides, and runbooks.
+- **instinct-embed** (OpenAI Text Embedding 3 small) – Embedding standard for tools. Use for RAG, vector search, and semantic analysis in utilities.
+
+**See [`docs/copilot-agents.md`](../docs/copilot-agents.md) for full agent definitions and copy-paste text for GitHub Copilot Agents UI configuration.**
+
 ## Version History
 
 - **v1.0** (2025-11-13): Initial version
-- **Current**: v1.0
+- **v1.1** (2025-11-13): Added Configured Copilot Agents section
+- **Current**: v1.1
 
 ---
 
