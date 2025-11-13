@@ -17,15 +17,6 @@ spec:
       - name: input-data
         value: "/data/cve_data.json"
   
-  # GPU node selector for GPU-accelerated workloads
-  nodeSelector:
-    cloud.google.com/gke-accelerator: nvidia-tesla-t4
-  
-  tolerations:
-    - key: nvidia.com/gpu
-      operator: Exists
-      effect: NoSchedule
-  
   templates:
     - name: epsilon-sweep
       steps:
@@ -63,6 +54,13 @@ spec:
           - name: epsilon-min
           - name: epsilon-max
           - name: n-steps
+      # GPU node selector only for this GPU-accelerated step
+      nodeSelector:
+        cloud.google.com/gke-accelerator: nvidia-tesla-t4
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
       container:
         image: cve-matter-analysis:cuda
         command: ["cve-matter", "refract"]
