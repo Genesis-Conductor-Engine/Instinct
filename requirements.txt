@@ -1,0 +1,39 @@
+# CVE Matter-Analysis OS - Core Dependencies
+
+# HTTP and API clients
+requests>=2.31.0
+requests-cache>=1.1.0
+
+# Data processing
+numpy>=1.24.0
+scipy>=1.10.0
+pandas>=2.0.0
+
+# Machine learning
+scikit-learn>=1.3.0
+
+# Date handling
+python-dateutil>=2.8.2
+
+# Configuration
+pyyaml>=6.0
+
+# Logging
+structlog>=23.1.0
+
+# Optional: CUDA/GPU support (uncomment if using GPU acceleration)
+# torch>=2.0.0
+
+# Optional: Advanced ML models (uncomment if needed)
+# xgboost>=2.0.0
+# lightgbm>=4.0.0
+
+# Optional: Notion integration (for Task 060)
+# notion-client>=2.0.0
+
+# Optional: Argo Workflows (for Task 090)
+# argo-workflows>=6.3.0
+
+# Optional: FastAPI for webhook server (for Task 090)
+# fastapi>=0.100.0
+# uvicorn[standard]>=0.23.0
