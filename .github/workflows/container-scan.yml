@@ -100,6 +100,8 @@ jobs:
   scan-filesystem:
     name: Scan Repository Filesystem
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     steps:
       - name: Checkout code
@@ -126,6 +128,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [scan-image, scan-filesystem]
     if: always()
+    permissions: {}
     
     steps:
       - name: Check scan results
