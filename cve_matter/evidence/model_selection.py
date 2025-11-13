@@ -128,10 +128,10 @@ class EvidenceAnalyzer:
                 result['waic'] = float(waic)
                 result['p_waic'] = float(p_waic)
 
-            # Compute AIC for comparison
-            aic = -2 * log_likelihood + 2 * n_params
-            result['aic'] = float(aic)
-
+            # Compute AIC (Akaike Information Criterion)
+            if 'aic' in criteria:
+                aic = -2 * log_likelihood + 2 * n_params
+                result['aic'] = float(aic)
             # Cross-validation score
             cv_scores = cross_val_score(model, X, y, cv=5)
             result['cv_accuracy_mean'] = float(np.mean(cv_scores))
