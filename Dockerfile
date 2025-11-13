@@ -44,17 +44,26 @@ FROM nvidia/cuda:12.2.0-base-ubuntu22.04 AS cuda
 
 WORKDIR /app
 
-# Install Python 3.11
+# Install Python 3.11 from deadsnakes PPA
 RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    ca-certificates \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y \
     python3.11 \
+    python3.11-distutils \
     python3-pip \
     build-essential \
     git \
-    ca-certificates \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Create symlink for python
-RUN ln -s /usr/bin/python3.11 /usr/bin/python
+# Install pip for Python 3.11
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
+
+# Create symlinks for python and pip
+RUN ln -sf /usr/bin/python3.11 /usr/bin/python && \
+    ln -sf /usr/local/bin/pip3.11 /usr/bin/pip3
 
 # Copy project files
 COPY pyproject.toml .
@@ -63,6 +72,7 @@ COPY config/ ./config/
 
 # Install Python dependencies including CUDA support
 RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip3 install --no-cache-dir click requests numpy scipy pandas scikit-learn pyyaml pydantic joblib
     pip3 install --no-cache-dir click requests numpy scipy pandas scikit-learn pyyaml pydantic joblib
 
 # Install the package

@@ -42,7 +42,7 @@ variable "subnet_cidr" {
 variable "enable_gpu" {
   description = "Enable GPU node pool"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "gpu_type" {

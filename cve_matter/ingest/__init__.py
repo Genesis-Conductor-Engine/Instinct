@@ -124,7 +124,7 @@ class NVDIngestor:
 
         for i in range(count):
             mock_cves.append({
-                'id': f'CVE-2024-{10000 + i}',
+                'id': f'MOCK-CVE-2024-{10000 + i}',
                 'description': f'Mock vulnerability description for testing purposes #{i}',
                 'published': datetime.now().isoformat(),
                 'modified': datetime.now().isoformat(),

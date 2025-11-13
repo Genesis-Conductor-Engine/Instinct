@@ -14,10 +14,9 @@ terraform {
     }
   }
   
-  backend "gcs" {
-    bucket = "cve-matter-terraform-state"
-    prefix = "terraform/state"
-  }
+  # Backend configuration should be provided via backend config file or CLI
+  # Example: terraform init -backend-config="bucket=your-bucket-name"
+  # See TERRAFORM.md for setup instructions
 }
 
 provider "google" {

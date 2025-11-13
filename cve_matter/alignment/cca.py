@@ -61,13 +61,19 @@ class CCAAlignment:
         Returns:
             NumPy array of features
         """
+        # Deterministic mapping for severity levels
+        severity_map = {'LOW': 0, 'MEDIUM': 25, 'HIGH': 50, 'CRITICAL': 75, 'NONE': -1}
+        
         features = []
         for cve in cves:
+            severity = cve.get('severity', '').upper()
+            severity_value = severity_map.get(severity, -1)
+            
             feature_vec = [
                 cve.get('cvss_score', 0.0),
                 len(cve.get('references', [])),
                 len(cve.get('description', '')),
-                hash(cve.get('severity', '')) % 100,
+                severity_value,  # Deterministic categorical encoding
             ]
             features.append(feature_vec)
 

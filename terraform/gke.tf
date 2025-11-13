@@ -163,7 +163,7 @@ resource "google_container_node_pool" "gpu_nodes" {
     taint {
       key    = "nvidia.com/gpu"
       value  = "true"
-      effect = "NO_SCHEDULE"
+      effect = "NoSchedule"
     }
 
     shielded_instance_config {
