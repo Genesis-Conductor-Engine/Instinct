@@ -1,0 +1,145 @@
+# Container Security Scanning with Trivy
+#
+# This workflow scans Docker container images for vulnerabilities using Trivy.
+# Fails on HIGH or CRITICAL vulnerabilities.
+# Runs on standard GitHub-hosted runners.
+#
+# See: https://github.com/aquasecurity/trivy-action
+
+name: Container Security Scan
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'Dockerfile'
+      - 'docker/**'
+      - '.github/workflows/container-scan.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'Dockerfile'
+      - 'docker/**'
+  workflow_dispatch:
+
+jobs:
+  scan-image:
+    name: Scan Docker Image with Trivy
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      security-events: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build Docker image
+        run: |
+          # Build the main Dockerfile if it exists
+          if [ -f "Dockerfile" ]; then
+            docker build -t lidlift:${{ github.sha }} .
+          else
+            echo "No Dockerfile found, creating minimal test image"
+            cat > Dockerfile.test <<EOF
+          FROM python:3.11-slim
+          WORKDIR /app
+          COPY . .
+          EOF
+            docker build -f Dockerfile.test -t lidlift:${{ github.sha }} .
+          fi
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'lidlift:${{ github.sha }}'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: '0'  # Don't fail on findings, upload results first
+      
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+      
+      - name: Run Trivy with fail on HIGH/CRITICAL
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'lidlift:${{ github.sha }}'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'  # Fail CI on HIGH or CRITICAL vulnerabilities
+          
+      - name: Generate Trivy report
+        uses: aquasecurity/trivy-action@master
+        if: always()
+        with:
+          image-ref: 'lidlift:${{ github.sha }}'
+          format: 'json'
+          output: 'trivy-report.json'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
+      
+      - name: Upload Trivy report artifact
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: trivy-report
+          path: trivy-report.json
+          retention-days: 30
+
+  scan-filesystem:
+    name: Scan Repository Filesystem
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner on repo
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-fs-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+      
+      - name: Upload filesystem scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-fs-results.sarif'
+
+  scan-success:
+    name: Container Scan Success
+    runs-on: ubuntu-latest
+    needs: [scan-image, scan-filesystem]
+    if: always()
+    
+    steps:
+      - name: Check scan results
+        run: |
+          echo "Image Scan: ${{ needs.scan-image.result }}"
+          echo "Filesystem Scan: ${{ needs.scan-filesystem.result }}"
+          
+          if [ "${{ needs.scan-image.result }}" != "success" ]; then
+            echo "❌ Container image scan failed - HIGH/CRITICAL vulnerabilities found"
+            exit 1
+          fi
+          
+          if [ "${{ needs.scan-filesystem.result }}" != "success" ]; then
+            echo "⚠️  Filesystem scan had issues but not blocking"
+          fi
+          
+          echo "✅ All security scans passed"

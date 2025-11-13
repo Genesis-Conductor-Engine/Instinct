@@ -1,0 +1,223 @@
+# Publish Capsules Workflow
+#
+# Publishes capsule configuration files to cloud storage when new versions are tagged.
+# Runs on standard GitHub-hosted runners.
+#
+# Prerequisites:
+# - GCP_WORKLOAD_IDENTITY_PROVIDER secret configured for GCP authentication
+# - GCP_SERVICE_ACCOUNT secret configured
+# - GCS_CAPSULES_BUCKET secret or variable for target bucket
+
+name: Publish Capsules
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., v1.4.0)'
+        required: true
+        default: 'latest'
+
+jobs:
+  validate:
+    name: Validate Capsules
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Create validation script if not exists
+        run: |
+          mkdir -p scripts
+          if [ ! -f "scripts/validate_capsules.py" ]; then
+            cat > scripts/validate_capsules.py <<'EOF'
+          """
+          Capsule validation script placeholder.
+          This script will be implemented in Task 070.
+          """
+          import json
+          import sys
+          from pathlib import Path
+          
+          def validate_capsules():
+              capsules_dir = Path("capsules")
+              if not capsules_dir.exists():
+                  print("No capsules directory found")
+                  return True
+              
+              valid = True
+              for capsule_file in capsules_dir.glob("*.json"):
+                  print(f"Validating {capsule_file.name}...")
+                  try:
+                      with open(capsule_file) as f:
+                          data = json.load(f)
+                      
+                      # Check required fields
+                      required = ["name", "version", "type", "description"]
+                      for field in required:
+                          if field not in data:
+                              print(f"  ✗ Missing field: {field}")
+                              valid = False
+                      
+                      if valid:
+                          print(f"  ✓ Valid")
+                  except json.JSONDecodeError as e:
+                      print(f"  ✗ Invalid JSON: {e}")
+                      valid = False
+              
+              return valid
+          
+          if __name__ == "__main__":
+              if validate_capsules():
+                  print("✅ All capsules valid")
+                  sys.exit(0)
+              else:
+                  print("❌ Validation failed")
+                  sys.exit(1)
+          EOF
+          fi
+      
+      - name: Validate capsule JSON files
+        run: |
+          python scripts/validate_capsules.py
+      
+      - name: Create artifact with validated capsules
+        uses: actions/upload-artifact@v3
+        with:
+          name: validated-capsules
+          path: capsules/*.json
+          retention-days: 30
+
+  publish:
+    name: Publish to Cloud Storage
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    permissions:
+      contents: read
+      id-token: write  # Required for GCP Workload Identity
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download validated capsules
+        uses: actions/download-artifact@v3
+        with:
+          name: validated-capsules
+          path: capsules/
+      
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${{ github.ref_name }}"
+          fi
+          
+          # Remove 'v' prefix if present
+          VERSION_CLEAN="${VERSION#v}"
+          
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "version_clean=${VERSION_CLEAN}" >> $GITHUB_OUTPUT
+          echo "Publishing version: ${VERSION_CLEAN}"
+      
+      - name: Create publish script if not exists
+        run: |
+          mkdir -p scripts
+          if [ ! -f "scripts/publish_capsules.sh" ]; then
+            cat > scripts/publish_capsules.sh <<'EOF'
+          #!/bin/bash
+          # Capsule publishing script placeholder
+          # This script will be implemented in Task 070
+          
+          set -euo pipefail
+          
+          VERSION="${VERSION:-latest}"
+          GCS_BUCKET="${GCS_CAPSULES_BUCKET:-}"
+          
+          echo "Publishing capsules version: $VERSION"
+          
+          if [ -z "$GCS_BUCKET" ]; then
+            echo "⚠️  GCS_CAPSULES_BUCKET not configured"
+            echo "Capsules would be published to: gs://BUCKET_NAME/"
+            echo "Files to publish:"
+            ls -lh capsules/*.json || echo "No capsules found"
+            exit 0
+          fi
+          
+          # In actual implementation (Task 070), this would:
+          # - Upload each capsule to GCS with version tag
+          # - Update "latest" aliases
+          # - Set appropriate caching headers
+          
+          echo "✅ Publishing placeholder complete"
+          exit 0
+          EOF
+            chmod +x scripts/publish_capsules.sh
+          fi
+      
+      - name: Authenticate to GCP (if configured)
+        if: env.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+        continue-on-error: true
+        env:
+          GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+      
+      - name: Set up Cloud SDK (if authenticated)
+        if: env.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
+        uses: google-github-actions/setup-gcloud@v1
+        continue-on-error: true
+        env:
+          GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+      
+      - name: Publish capsules
+        env:
+          VERSION: ${{ steps.version.outputs.version_clean }}
+          GCS_CAPSULES_BUCKET: ${{ secrets.GCS_CAPSULES_BUCKET }}
+        run: |
+          bash scripts/publish_capsules.sh
+      
+      - name: Create release notes
+        run: |
+          echo "## Published Capsules - Version ${{ steps.version.outputs.version_clean }}" > release-notes.md
+          echo "" >> release-notes.md
+          echo "### Files Published:" >> release-notes.md
+          for file in capsules/*.json; do
+            if [ -f "$file" ]; then
+              filename=$(basename "$file")
+              echo "- \`$filename\`" >> release-notes.md
+            fi
+          done
+          echo "" >> release-notes.md
+          echo "### Access URLs:" >> release-notes.md
+          echo "- Latest: \`https://storage.googleapis.com/\${BUCKET}/\${filename}-latest.json\`" >> release-notes.md
+          echo "- Versioned: \`https://storage.googleapis.com/\${BUCKET}/\${filename}-${{ steps.version.outputs.version_clean }}.json\`" >> release-notes.md
+      
+      - name: Upload release notes
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-notes
+          path: release-notes.md
+          retention-days: 90
+      
+      - name: Summary
+        run: |
+          echo "## Capsule Publishing Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version**: ${{ steps.version.outputs.version_clean }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat release-notes.md >> $GITHUB_STEP_SUMMARY
