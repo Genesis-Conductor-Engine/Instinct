@@ -296,7 +296,7 @@ addons_config {
 taint {
   key    = "dedicated"
   value  = "gpu"
-  effect = "NO_SCHEDULE"
+  effect = "NoSchedule"
 }
 ```
 

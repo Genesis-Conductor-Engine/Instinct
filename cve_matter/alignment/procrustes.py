@@ -6,6 +6,8 @@ from typing import Any
 import numpy as np
 from scipy.spatial import procrustes
 
+from cve_matter.constants import SEVERITY_MAP
+
 
 class ProcrustesAlignment:
     """Perform Procrustes analysis for shape alignment in CVE feature space.
@@ -61,14 +63,11 @@ class ProcrustesAlignment:
         Returns:
             NumPy array of features
         """
-        # Deterministic mapping for severity levels
-        severity_map = {'LOW': 0, 'MEDIUM': 25, 'HIGH': 50, 'CRITICAL': 75, 'NONE': -1}
-        
         features = []
         for cve in cves:
             # Extract numerical features for alignment
             severity = cve.get('severity', '').upper()
-            severity_value = severity_map.get(severity, -1)
+            severity_value = SEVERITY_MAP.get(severity, -1)
             
             feature_vec = [
                 cve.get('cvss_score', 0.0),

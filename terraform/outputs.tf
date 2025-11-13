@@ -32,5 +32,5 @@ output "cpu_node_pool_name" {
 
 output "gpu_node_pool_name" {
   description = "GPU Node Pool Name"
-  value       = var.enable_gpu ? google_container_node_pool.gpu_nodes[0].name : "N/A"
+  value       = var.enable_gpu ? google_container_node_pool.gpu_nodes[0].name : "GPU node pool not enabled"
 }
