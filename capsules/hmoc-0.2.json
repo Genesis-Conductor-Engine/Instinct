@@ -1,0 +1,240 @@
+{
+  "name": "hmoc",
+  "version": "0.2.0",
+  "type": "coordination-framework",
+  "description": "H-MOC v0.2 - Hierarchical Multi-Objective Coordinator for CVE pipeline orchestration",
+  "purpose": "Coordinate multi-objective optimization, performance tracking, and structured reporting for LID-LIFT pipeline",
+  "features": {
+    "run_report": {
+      "enabled": true,
+      "description": "Structured execution reports with metrics and outcomes",
+      "outputs": [
+        "execution_time",
+        "resource_utilization",
+        "pipeline_metrics",
+        "quality_scores",
+        "error_logs"
+      ]
+    },
+    "multi_objective_tracking": {
+      "enabled": true,
+      "description": "Track and optimize multiple objectives simultaneously",
+      "objectives": [
+        "accuracy",
+        "recall",
+        "precision",
+        "f1_score",
+        "processing_time",
+        "resource_efficiency"
+      ]
+    },
+    "performance_monitoring": {
+      "enabled": true,
+      "description": "Real-time performance monitoring and alerting",
+      "metrics": [
+        "throughput",
+        "latency",
+        "error_rate",
+        "queue_depth"
+      ]
+    },
+    "hierarchical_coordination": {
+      "enabled": true,
+      "description": "Hierarchical task coordination across pipeline stages",
+      "levels": [
+        "strategic",
+        "tactical",
+        "operational"
+      ]
+    }
+  },
+  "integration": {
+    "lidlift": {
+      "version": "1.4",
+      "capsule_ref": "capsules/lidlift-v1.json",
+      "coordination_points": [
+        "ingest_completion",
+        "alignment_quality",
+        "arbiter_predictions",
+        "refractor_alerts",
+        "evidence_calculation"
+      ]
+    }
+  },
+  "reporting": {
+    "format": "JSON",
+    "frequency": {
+      "real_time": "on_event",
+      "batch": "per_run",
+      "aggregated": "daily"
+    },
+    "sections": {
+      "executive_summary": {
+        "description": "High-level overview of run outcomes",
+        "fields": [
+          "run_id",
+          "timestamp",
+          "status",
+          "cves_processed",
+          "high_priority_count",
+          "duration"
+        ]
+      },
+      "pipeline_metrics": {
+        "description": "Detailed metrics for each pipeline stage",
+        "fields": [
+          "stage_name",
+          "input_count",
+          "output_count",
+          "duration",
+          "resource_usage",
+          "quality_score"
+        ]
+      },
+      "objectives_tracking": {
+        "description": "Multi-objective optimization status",
+        "fields": [
+          "objective_name",
+          "target_value",
+          "actual_value",
+          "deviation",
+          "trend"
+        ]
+      },
+      "alerts_and_warnings": {
+        "description": "Anomalies, failures, or degraded performance",
+        "fields": [
+          "severity",
+          "component",
+          "message",
+          "timestamp",
+          "resolution_status"
+        ]
+      },
+      "recommendations": {
+        "description": "Automated recommendations for optimization",
+        "fields": [
+          "area",
+          "suggestion",
+          "expected_impact",
+          "priority"
+        ]
+      }
+    },
+    "output_destinations": [
+      "file_system",
+      "notion",
+      "monitoring_dashboard",
+      "webhook"
+    ]
+  },
+  "optimization": {
+    "pareto_frontier": {
+      "enabled": true,
+      "description": "Identify Pareto-optimal configurations",
+      "objectives_to_balance": [
+        "accuracy_vs_speed",
+        "precision_vs_recall",
+        "cost_vs_quality"
+      ]
+    },
+    "auto_tuning": {
+      "enabled": false,
+      "description": "Automatic hyperparameter tuning (future feature)",
+      "note": "Planned for v0.3"
+    }
+  },
+  "configuration": {
+    "environment_variables": {
+      "HMOC_REPORT_LEVEL": {
+        "required": false,
+        "default": "standard",
+        "options": ["minimal", "standard", "detailed", "verbose"],
+        "description": "Level of detail in run reports"
+      },
+      "HMOC_ALERT_THRESHOLD": {
+        "required": false,
+        "default": "medium",
+        "options": ["low", "medium", "high", "critical"],
+        "description": "Minimum severity for alerting"
+      },
+      "HMOC_REPORTING_ENABLED": {
+        "required": false,
+        "default": true,
+        "description": "Enable/disable H-MOC reporting"
+      }
+    }
+  },
+  "coordination_protocol": {
+    "stage_handoff": {
+      "method": "event_driven",
+      "validation": "schema_check",
+      "retry_policy": "exponential_backoff",
+      "timeout": "configurable_per_stage"
+    },
+    "error_handling": {
+      "strategy": "graceful_degradation",
+      "fallback": "checkpoint_recovery",
+      "notification": "immediate"
+    },
+    "resource_management": {
+      "allocation": "dynamic",
+      "scaling": "horizontal",
+      "limits": "enforced"
+    }
+  },
+  "observability": {
+    "metrics_collection": {
+      "provider": "Prometheus",
+      "scrape_interval": "15s",
+      "retention": "30d"
+    },
+    "distributed_tracing": {
+      "enabled": true,
+      "propagation": "W3C_trace_context",
+      "sampling": "adaptive"
+    },
+    "logging": {
+      "format": "structured_json",
+      "fields": [
+        "timestamp",
+        "run_id",
+        "stage",
+        "level",
+        "message",
+        "context"
+      ]
+    }
+  },
+  "api": {
+    "endpoints": {
+      "submit_run": {
+        "method": "POST",
+        "path": "/api/v1/runs",
+        "description": "Submit a new CVE analysis run"
+      },
+      "get_report": {
+        "method": "GET",
+        "path": "/api/v1/runs/{run_id}/report",
+        "description": "Retrieve run report by ID"
+      },
+      "list_runs": {
+        "method": "GET",
+        "path": "/api/v1/runs",
+        "description": "List recent runs with filtering"
+      },
+      "get_metrics": {
+        "method": "GET",
+        "path": "/api/v1/metrics",
+        "description": "Retrieve aggregated metrics"
+      }
+    }
+  },
+  "metadata": {
+    "created": "2025-11-13",
+    "updated": "2025-11-13",
+    "status": "active",
+    "version_notes": "Added run_report integration, multi-objective tracking, and performance monitoring",
+    "next_release": "0.3.0 - Auto-tuning and ML-based optimization"
+  }
+}

@@ -1,0 +1,324 @@
+{
+  "name": "runbooks",
+  "version": "1.0.0",
+  "type": "operational-procedures",
+  "description": "Operational runbooks for CVE Matter-Analysis OS - Standard procedures for deployment, troubleshooting, and maintenance",
+  "purpose": "Provide step-by-step procedures for common operational tasks and incident response",
+  "runbooks": {
+    "deployment": {
+      "initial_setup": {
+        "title": "Initial Deployment Setup",
+        "description": "Deploy CVE Matter-Analysis OS for the first time",
+        "prerequisites": [
+          "GCP project created and configured",
+          "Terraform installed (v1.5+)",
+          "kubectl installed and configured",
+          "Docker installed for local testing"
+        ],
+        "steps": [
+          "Clone repository and checkout main branch",
+          "Configure environment variables in .env file",
+          "Run `terraform init` in infrastructure/ directory",
+          "Run `terraform plan` and review changes",
+          "Run `terraform apply` to provision infrastructure",
+          "Build Docker images: `docker build -t lidlift:latest .`",
+          "Push images to GCR: `docker push gcr.io/PROJECT_ID/lidlift:latest`",
+          "Deploy to Kubernetes: `kubectl apply -f k8s/`",
+          "Verify deployment: `kubectl get pods -n cve-analysis`",
+          "Run smoke tests: `./scripts/smoke_test.sh`"
+        ],
+        "validation": [
+          "All pods in Running state",
+          "Health check endpoints returning 200 OK",
+          "Smoke tests passing",
+          "Monitoring dashboards showing metrics"
+        ],
+        "rollback": "Run `terraform destroy` and `kubectl delete -f k8s/` if needed"
+      },
+      "update_deployment": {
+        "title": "Update Existing Deployment",
+        "description": "Deploy new version to existing infrastructure",
+        "prerequisites": [
+          "New version tagged in Git",
+          "CI/CD pipeline passed",
+          "Security scans completed"
+        ],
+        "steps": [
+          "Review changelog and breaking changes",
+          "Build new Docker image with version tag",
+          "Push image to container registry",
+          "Update k8s manifests with new image tag",
+          "Run `kubectl diff -f k8s/` to preview changes",
+          "Apply changes: `kubectl apply -f k8s/`",
+          "Monitor rollout: `kubectl rollout status deployment/lidlift`",
+          "Run post-deployment tests",
+          "Verify metrics and logs"
+        ],
+        "validation": [
+          "Rollout completed successfully",
+          "No increase in error rates",
+          "Response times within SLA",
+          "All features functioning correctly"
+        ],
+        "rollback": "Run `kubectl rollout undo deployment/lidlift`"
+      }
+    },
+    "troubleshooting": {
+      "high_error_rate": {
+        "title": "Troubleshooting High Error Rate",
+        "description": "Diagnose and resolve elevated error rates in the pipeline",
+        "symptoms": [
+          "Error rate >5% in monitoring dashboard",
+          "Failed CVE processing jobs",
+          "Alert from H-MOC reporting"
+        ],
+        "investigation_steps": [
+          "Check H-MOC run report for failed stages",
+          "Review logs: `kubectl logs -l app=lidlift --tail=100`",
+          "Check pod status: `kubectl get pods -n cve-analysis`",
+          "Verify NVD API status and rate limits",
+          "Check resource utilization: CPU, memory, disk",
+          "Review recent changes in Git history",
+          "Check external dependencies (NVD API, storage, etc.)"
+        ],
+        "common_causes": {
+          "nvd_api_rate_limit": {
+            "symptom": "429 Too Many Requests in logs",
+            "resolution": "Increase backoff delay or add API key"
+          },
+          "resource_exhaustion": {
+            "symptom": "OOMKilled or CPU throttling",
+            "resolution": "Increase resource limits in k8s manifests"
+          },
+          "data_quality": {
+            "symptom": "Validation errors in alignment stage",
+            "resolution": "Check data schema and add additional validation"
+          },
+          "network_issues": {
+            "symptom": "Connection timeouts",
+            "resolution": "Check network policies and firewall rules"
+          }
+        },
+        "resolution": "Apply appropriate fix based on root cause, then monitor for 1 hour",
+        "escalation": "If unresolved after 2 hours, escalate to senior SRE"
+      },
+      "performance_degradation": {
+        "title": "Performance Degradation",
+        "description": "Address slow processing times or reduced throughput",
+        "symptoms": [
+          "Processing time >10s per CVE (baseline: <5s)",
+          "Queue depth increasing",
+          "H-MOC reports showing latency increase"
+        ],
+        "investigation_steps": [
+          "Check current throughput vs baseline",
+          "Review resource utilization metrics",
+          "Check for epsilon-refractor shift alerts",
+          "Analyze slow query logs if applicable",
+          "Review recent data volume changes",
+          "Check for background jobs or maintenance tasks"
+        ],
+        "common_causes": {
+          "data_volume_spike": {
+            "symptom": "Sudden increase in CVE count",
+            "resolution": "Scale up pods: `kubectl scale deployment/lidlift --replicas=10`"
+          },
+          "model_complexity": {
+            "symptom": "Arbiter predictions taking longer",
+            "resolution": "Review model configuration, consider simplification"
+          },
+          "database_slowdown": {
+            "symptom": "High database latency",
+            "resolution": "Check indexes, optimize queries, or scale database"
+          }
+        },
+        "resolution": "Apply scaling or optimization, validate throughput returns to baseline",
+        "escalation": "If performance does not improve within 1 hour, escalate to engineering team"
+      },
+      "alignment_failure": {
+        "title": "Alignment Quality Below Threshold",
+        "description": "Handle cases where R² falls below configured threshold",
+        "symptoms": [
+          "Alignment R² < 0.8",
+          "Pipeline stopping at alignment stage",
+          "Alert from refractor module"
+        ],
+        "investigation_steps": [
+          "Check H-MOC report for alignment metrics",
+          "Review input data quality and distribution",
+          "Verify reference embeddings are current",
+          "Check for data drift using refractor module",
+          "Review recent changes to embedding generation"
+        ],
+        "common_causes": {
+          "distributional_shift": {
+            "symptom": "Refractor showing high ε-divergence",
+            "resolution": "Update reference embeddings with recent data"
+          },
+          "bad_input_data": {
+            "symptom": "Anomalies in CVE descriptions or metadata",
+            "resolution": "Filter out problematic CVEs, improve validation"
+          },
+          "threshold_too_strict": {
+            "symptom": "Consistently failing alignment despite good results",
+            "resolution": "Review and adjust R² threshold if appropriate"
+          }
+        },
+        "resolution": "Apply fix and reprocess affected CVE batch",
+        "escalation": "If alignment issues persist, escalate to ML engineering team"
+      }
+    },
+    "maintenance": {
+      "model_retraining": {
+        "title": "Arbiter Model Retraining",
+        "description": "Periodic retraining of the stacked arbiter model",
+        "frequency": "Monthly or when performance degrades",
+        "prerequisites": [
+          "Training data collected (≥10K labeled CVEs)",
+          "GPU resources available (optional but recommended)",
+          "Previous model backed up"
+        ],
+        "steps": [
+          "Export recent CVE data with ground truth labels",
+          "Prepare training dataset with validation split",
+          "Backup current model: `cp models/arbiter.pkl models/arbiter_backup_$(date +%Y%m%d).pkl`",
+          "Run training script: `python scripts/train_arbiter.py --data data/training.jsonl`",
+          "Evaluate model on validation set",
+          "Compare metrics with previous model (accuracy, F1, etc.)",
+          "If improved, deploy new model to staging",
+          "Run integration tests in staging",
+          "Deploy to production if tests pass",
+          "Monitor performance for 24 hours"
+        ],
+        "validation": [
+          "Validation accuracy ≥ previous model",
+          "No regression in key metrics",
+          "Pareto frontier maintained or improved"
+        ],
+        "rollback": "Restore previous model from backup if performance degrades"
+      },
+      "reference_embedding_update": {
+        "title": "Update Reference Embeddings",
+        "description": "Refresh reference embeddings for alignment module",
+        "frequency": "Quarterly or when alignment quality degrades",
+        "prerequisites": [
+          "Recent representative CVE sample (≥1K CVEs)",
+          "Current embeddings backed up"
+        ],
+        "steps": [
+          "Collect recent CVE sample spanning multiple categories",
+          "Generate embeddings: `python scripts/generate_embeddings.py --input data/reference_cves.jsonl`",
+          "Backup current reference: `cp data/reference_embeddings.npy data/reference_embeddings_backup_$(date +%Y%m%d).npy`",
+          "Copy new embeddings to reference location",
+          "Run validation tests",
+          "Monitor alignment R² for next 24 hours"
+        ],
+        "validation": [
+          "Alignment R² ≥ 0.8 on test set",
+          "Refractor ε-divergence within acceptable range"
+        ],
+        "rollback": "Restore previous reference embeddings if alignment quality drops"
+      },
+      "database_maintenance": {
+        "title": "Database Maintenance",
+        "description": "Routine database maintenance and optimization",
+        "frequency": "Weekly",
+        "steps": [
+          "Backup database: `./scripts/backup_db.sh`",
+          "Run VACUUM and ANALYZE on PostgreSQL (if applicable)",
+          "Check and rebuild indexes if needed",
+          "Archive old data (>1 year)",
+          "Verify backup integrity",
+          "Update statistics"
+        ],
+        "validation": [
+          "Backup successful and restorable",
+          "Query performance maintained",
+          "Disk space within limits"
+        ]
+      }
+    },
+    "incident_response": {
+      "security_vulnerability": {
+        "title": "Security Vulnerability Discovered",
+        "description": "Response to security vulnerability in dependencies or code",
+        "severity": "High",
+        "immediate_actions": [
+          "Assess vulnerability scope and impact",
+          "Check if vulnerability is actively exploited",
+          "Review SECURITY.md for disclosure process",
+          "Notify security team immediately"
+        ],
+        "steps": [
+          "Isolate affected components if necessary",
+          "Apply security patches from upstream",
+          "Run security scans: `trivy image lidlift:latest`",
+          "Update dependencies: `pip install -U vulnerable-package`",
+          "Rebuild and test Docker image",
+          "Deploy patch to staging first",
+          "Run security validation tests",
+          "Deploy to production if tests pass",
+          "Document incident and resolution"
+        ],
+        "validation": [
+          "Vulnerability no longer detected by scanners",
+          "No functional regressions",
+          "Security tests passing"
+        ],
+        "communication": "Update stakeholders via incident channel"
+      },
+      "data_breach_suspected": {
+        "title": "Suspected Data Breach",
+        "description": "Response to potential unauthorized data access",
+        "severity": "Critical",
+        "immediate_actions": [
+          "Activate incident response team",
+          "Preserve logs and evidence",
+          "Do NOT make changes that might destroy evidence",
+          "Notify security team and legal counsel"
+        ],
+        "steps": [
+          "Follow SECURITY.md incident response procedures",
+          "Review access logs for anomalies",
+          "Identify scope of potential exposure",
+          "Rotate all credentials and secrets",
+          "Review and strengthen access controls",
+          "Conduct forensic analysis",
+          "Document timeline and findings",
+          "Implement additional monitoring"
+        ],
+        "escalation": "Critical - immediate escalation to CISO and legal team",
+        "communication": "Follow legal and compliance requirements for disclosure"
+      }
+    }
+  },
+  "contacts": {
+    "on_call": {
+      "primary": "sre-oncall@example.com",
+      "secondary": "sre-backup@example.com"
+    },
+    "escalation": {
+      "engineering_lead": "eng-lead@example.com",
+      "security_team": "security@example.com",
+      "legal": "legal@example.com"
+    },
+    "vendor_support": {
+      "gcp": "GCP Support Console",
+      "github": "GitHub Support"
+    }
+  },
+  "tools_and_links": {
+    "monitoring": "https://monitoring.example.com/cve-analysis",
+    "logs": "https://logs.example.com/cve-analysis",
+    "documentation": "https://docs.example.com/cve-analysis",
+    "incident_tracker": "https://incidents.example.com",
+    "chat": "Slack: #cve-analysis-ops"
+  },
+  "metadata": {
+    "created": "2025-11-13",
+    "updated": "2025-11-13",
+    "status": "active",
+    "maintainers": ["sre-team", "cve-analysis-team"],
+    "review_frequency": "Quarterly"
+  }
+}
