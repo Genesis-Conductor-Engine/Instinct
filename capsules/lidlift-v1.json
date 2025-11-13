@@ -1,0 +1,182 @@
+{
+  "name": "lidlift-v1",
+  "version": "1.4.0",
+  "type": "defense-analysis",
+  "description": "LID-LIFT v1.4 - Layered Intelligence Defense for CVE Matter-Analysis",
+  "mission": "Blue-team CVE analysis pipeline: NVD ingest → positional alignment → stacked arbiter → ε-refractors → Bayesian evidence",
+  "guardrails": {
+    "offensive_payloads": false,
+    "cryptographic_breaking": false,
+    "exploit_generation": false,
+    "defense_only": true
+  },
+  "pipeline": {
+    "stages": [
+      {
+        "name": "ingest",
+        "module": "src.ingest.nvd_client",
+        "description": "Fetch and normalize CVE data from NVD API v2.0",
+        "features": [
+          "delta_sync",
+          "etag_support",
+          "exponential_backoff",
+          "jsonl_output"
+        ]
+      },
+      {
+        "name": "alignment",
+        "module": "src.alignment",
+        "description": "Align vulnerability representations across embedding spaces",
+        "methods": ["procrustes", "cca"],
+        "threshold": {
+          "r_squared": 0.8,
+          "description": "Minimum R² coefficient for alignment quality"
+        }
+      },
+      {
+        "name": "arbiter",
+        "module": "src.models.arbiter",
+        "description": "Stacked ensemble learning with Pareto knee detection",
+        "components": [
+          "base_learners",
+          "meta_learner",
+          "pareto_optimizer"
+        ]
+      },
+      {
+        "name": "refractors",
+        "module": "src.refractors",
+        "description": "Detect distributional shifts in vulnerability patterns",
+        "components": ["epsilon_refractor", "shift_detector"],
+        "threshold": {
+          "epsilon": 0.05,
+          "description": "Maximum acceptable ε-divergence before alert"
+        }
+      },
+      {
+        "name": "evidence",
+        "module": "src.evaluation.evidence",
+        "description": "Calculate Bayesian evidence for model comparison",
+        "methods": ["BIC", "WAIC", "bayes_factor", "jeffreys_scale"],
+        "default_method": "WAIC"
+      }
+    ]
+  },
+  "technology_stack": {
+    "language": "Python",
+    "version": "3.11+",
+    "cuda": {
+      "required": false,
+      "description": "Optional CUDA support for GPU-accelerated operations"
+    },
+    "container": {
+      "runtime": "Docker",
+      "orchestration": "Kubernetes",
+      "platform": "GKE",
+      "isolation": "gVisor"
+    },
+    "workflow": {
+      "engine": "Argo Workflows",
+      "infrastructure": "Terraform",
+      "ci_cd": "GitHub Actions"
+    }
+  },
+  "configuration": {
+    "environment_variables": {
+      "NVD_API_KEY": {
+        "required": false,
+        "description": "API key for NVD access (optional but recommended)"
+      },
+      "ALIGNMENT_R2_THRESHOLD": {
+        "required": false,
+        "default": 0.8,
+        "description": "Minimum R² for alignment quality"
+      },
+      "EPSILON_THRESHOLD": {
+        "required": false,
+        "default": 0.05,
+        "description": "Threshold for refractor alerts"
+      },
+      "EVIDENCE_METHOD": {
+        "required": false,
+        "default": "WAIC",
+        "options": ["BIC", "WAIC"],
+        "description": "Bayesian evidence calculation method"
+      },
+      "LOG_LEVEL": {
+        "required": false,
+        "default": "INFO",
+        "options": ["DEBUG", "INFO", "WARN", "ERROR"],
+        "description": "Logging verbosity level"
+      },
+      "CUDA_VISIBLE_DEVICES": {
+        "required": false,
+        "description": "GPU device selection for CUDA operations"
+      }
+    },
+    "secrets_management": {
+      "source": "environment_or_gcp_secret_manager",
+      "policy": "no_secrets_in_code"
+    }
+  },
+  "integration": {
+    "h_moc": {
+      "version": "0.2",
+      "features": [
+        "run_report",
+        "multi_objective_tracking",
+        "performance_monitoring"
+      ],
+      "capsule_ref": "capsules/hmoc-0.2.json"
+    },
+    "runbooks": {
+      "capsule_ref": "capsules/runbooks.json"
+    }
+  },
+  "operational": {
+    "performance": {
+      "batch_throughput": "≥1000 CVEs/hour",
+      "api_response_time": "<5 seconds",
+      "concurrent_processing": true
+    },
+    "reliability": {
+      "graceful_degradation": true,
+      "retry_logic": "exponential_backoff",
+      "error_logging": "comprehensive"
+    },
+    "observability": {
+      "logging": {
+        "format": "JSON",
+        "structured": true
+      },
+      "metrics": "Prometheus",
+      "tracing": "distributed",
+      "reporting": "H-MOC"
+    }
+  },
+  "development": {
+    "tasks_directory": ".copilot/tasks/",
+    "workflow": "PR-per-task",
+    "references": ["SECURITY.md", "CODEOWNERS", ".copilot/AGENT_GUIDE.md"]
+  },
+  "documentation": {
+    "primary": "prompts/legendary_lidlift_v14.md",
+    "micro_core": "prompts/micro_core.txt",
+    "nano_core": "prompts/nano_core.txt"
+  },
+  "security": {
+    "policy": "SECURITY.md",
+    "scanning": {
+      "code": "CodeQL",
+      "containers": "Trivy",
+      "dependencies": "automated"
+    },
+    "vulnerability_threshold": "fail_on_high_critical"
+  },
+  "metadata": {
+    "created": "2025-11-13",
+    "updated": "2025-11-13",
+    "status": "active",
+    "maintainers": ["cve-analysis-team"]
+  }
+}

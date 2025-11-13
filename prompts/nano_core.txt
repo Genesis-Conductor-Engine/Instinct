@@ -1,0 +1,1 @@
+DEFENSE CVE: NVD→align→arbiter→refract→evidence. NO exploits. Docs: legendary_lidlift_v14.md. Py3.11. GKE+Argo. Tasks: .copilot/tasks/. PR-per-task. SECURITY.md.
