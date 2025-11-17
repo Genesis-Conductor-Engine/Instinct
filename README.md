@@ -13,10 +13,10 @@ The CVE Matter-Analysis OS is a comprehensive pipeline for analyzing vulnerabili
 The pipeline consists of five main stages:
 
 1. **NVD Ingest** → Fetch and normalize CVE data from NVD API v2.0
-2. **Positional Alignment** → Align vulnerability embeddings across different spaces
-3. **Stacked Arbiter** → Ensemble learning for severity prediction with Pareto optimization
-4. **Epsilon-Refractors** → Detect distributional shifts in vulnerability patterns
-5. **Bayesian Evidence** → Calculate evidence scores using BIC/WAIC for prioritization
+1. **Positional Alignment** → Align vulnerability embeddings across different spaces
+1. **Stacked Arbiter** → Ensemble learning for severity prediction with Pareto optimization
+1. **Epsilon-Refractors** → Detect distributional shifts in vulnerability patterns
+1. **Bayesian Evidence** → Calculate evidence scores using BIC/WAIC for prioritization
 
 ## Technology Stack
 
@@ -51,26 +51,33 @@ source venv/bin/activate  # or `venv\Scripts\activate` on Windows
 # Install dependencies
 pip install -r requirements.txt
 
-# Run pipeline
+# Run pipeline scaffold
 python -m src.main
+
+# Quick CLI demo (ingest + analyze)
+python -m src.cli ingest samples/cve_demo.json
+python -m src.cli analyze --mode arbiter-demo
 ```
 
 ### Running with Docker
 
 ```bash
-# Build image
-docker build -t lidlift:latest .
+# Build GPU-first image (override CUDA version via --build-arg CUDA_IMAGE_TAG=...)
+docker build -t cve-matter:cuda .
 
-# Run container
+# Run container (requires NVIDIA Container Toolkit and a GPU-enabled host)
 docker run -it --rm \
+  --gpus all \
   -e NVD_API_KEY=$NVD_API_KEY \
-  -v $(pwd)/data:/app/data \
-  lidlift:latest
+  -v $(pwd)/samples:/app/samples:ro \
+  cve-matter:cuda \
+  python -m src.cli analyze --mode arbiter-demo
 ```
 
 ## Configuration
 
 Environment variables:
+
 - `NVD_API_KEY` - API key for NVD access (optional but recommended)
 - `ALIGNMENT_R2_THRESHOLD` - Minimum R² for alignment quality (default: 0.8)
 - `EPSILON_THRESHOLD` - Threshold for refractor alerts (default: 0.05)
@@ -92,9 +99,9 @@ This repository is configured for GitHub Copilot agents to assist with developme
 ### Getting Started with Copilot
 
 1. **Read the Agent Guide**: Start with [`.copilot/AGENT_GUIDE.md`](.copilot/AGENT_GUIDE.md) for comprehensive instructions
-2. **Review Task Definitions**: Tasks are defined in [`.copilot/tasks/`](.copilot/tasks/) numbered 010-090
-3. **Follow the Workflow**: Execute tasks sequentially, one PR per task
-4. **Reference Documentation**: Use system documentation in `prompts/` and `capsules/`
+1. **Review Task Definitions**: Tasks are defined in [`.copilot/tasks/`](.copilot/tasks/) numbered 010-090
+1. **Follow the Workflow**: Execute tasks sequentially, one PR per task
+1. **Reference Documentation**: Use system documentation in `prompts/` and `capsules/`
 
 ### Task Overview
 
@@ -111,14 +118,15 @@ This repository is configured for GitHub Copilot agents to assist with developme
 ### Key Principles for Copilot Agents
 
 1. **Defense-Only**: All code must support defensive security purposes exclusively
-2. **File-Anchored**: Each task specifies exact files to create or modify
-3. **One PR Per Task**: Create focused, reviewable pull requests
-4. **Security-First**: Never commit secrets; scan dependencies; validate inputs
-5. **Sequential Execution**: Complete tasks in order (010 → 020 → ... → 090)
+1. **File-Anchored**: Each task specifies exact files to create or modify
+1. **One PR Per Task**: Create focused, reviewable pull requests
+1. **Security-First**: Never commit secrets; scan dependencies; validate inputs
+1. **Sequential Execution**: Complete tasks in order (010 → 020 → ... → 090)
 
 ### Creating a PR
 
 When working on a task:
+
 ```markdown
 ## Task: [Number] - [Name]
 
@@ -132,7 +140,7 @@ When working on a task:
 
 ### Validation
 - [x] Linters pass
-- [x] Tests pass  
+- [x] Tests pass
 - [x] Security scan clean
 - [x] Acceptance criteria met
 
@@ -170,6 +178,7 @@ mypy src/
 ## Security
 
 **This is a defense-only system**. See [SECURITY.md](SECURITY.md) for:
+
 - Security policy and guardrails
 - Vulnerability reporting process
 - Secure development practices
@@ -192,10 +201,10 @@ mypy src/
 ## Contributing
 
 1. Review the [Copilot Agent Guide](.copilot/AGENT_GUIDE.md)
-2. Select a task from [`.copilot/tasks/`](.copilot/tasks/)
-3. Implement changes following the task definition
-4. Create a focused PR with validation evidence
-5. Address code review feedback
+1. Select a task from [`.copilot/tasks/`](.copilot/tasks/)
+1. Implement changes following the task definition
+1. Create a focused PR with validation evidence
+1. Address code review feedback
 
 ## License
 
@@ -210,13 +219,14 @@ mypy src/
 ## Acknowledgments
 
 This system integrates concepts from:
+
 - NVD/NIST for vulnerability data
 - H-MOC (Hierarchical Multi-Objective Coordinator) for orchestration
 - LID-LIFT (Layered Intelligence Defense) framework
 - Academic research in Bayesian model comparison and distributional shift detection
 
----
+______________________________________________________________________
 
-**Version**: 1.0.0  
-**Last Updated**: 2025-11-13  
+**Version**: 1.0.0
+**Last Updated**: 2025-11-13
 **Status**: Active Development

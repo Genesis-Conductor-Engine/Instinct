@@ -1,0 +1,30 @@
+[
+    {
+        "cve_id": "CVE-2025-0001",
+        "cvss": 8.6,
+        "summary": "Heap overflow in vendor firmware allows denial of service.",
+        "affected_products": [
+            "VendorOS 12",
+            "VendorOS 13"
+        ],
+        "published": "2025-01-05"
+    },
+    {
+        "cve_id": "CVE-2025-0402",
+        "cvss": 6.3,
+        "summary": "Improper auth in edge gateway permits privilege escalation.",
+        "affected_products": [
+            "GatewayX 5.2"
+        ],
+        "published": "2025-02-11"
+    },
+    {
+        "cve_id": "CVE-2025-0710",
+        "cvss": 4.9,
+        "summary": "Timing side-channel leaks key material in crypto accelerator.",
+        "affected_products": [
+            "CryptoAccel A100"
+        ],
+        "published": "2025-03-19"
+    }
+]
