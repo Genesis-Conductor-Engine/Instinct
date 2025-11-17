@@ -43,7 +43,3 @@ messages:
         - Load capsules spec from https://genesisconductor.io/capsules/lidlift-v1.json
       
 ---
-
-# My Agent
-
-Describe what your agent does here...
