@@ -1,9 +1,15 @@
 import numpy as np
 import sys
 import os
+from typing import List, Tuple
 
-# Add src to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# --- FIX ---
+# Get the project root directory (one level up from 'scripts')
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Add the 'src' directory (where 'models' lives) to the Python path
+src_path = os.path.join(project_root, 'src')
+sys.path.append(src_path)
+# --- END FIX ---
 
 from models.arbiter import TensorPowerArbiter
 from models.pareto import get_pareto_solutions
