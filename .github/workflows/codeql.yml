@@ -29,7 +29,7 @@ jobs:
     permissions:
       actions: read
       contents: read
-      security-events: write
+      # security-events: write  # not needed if we don't upload to code scanning
     
     strategy:
       fail-fast: false
@@ -59,14 +59,15 @@ jobs:
           pip install -r requirements.txt || echo "No requirements.txt yet"
         continue-on-error: true
       
-      - name: Perform CodeQL Analysis
+      - name: Perform CodeQL Analysis (no code scanning upload)
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{ matrix.language }}"
-          
-      - name: Upload SARIF results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+          upload: "false"          # <— key change: do not upload to code scanning
+      
+      # Optional: archive SARIF as a plain artifact
+      - name: Upload SARIF artifact
+        uses: actions/upload-artifact@v4
         with:
-          sarif_file: ../results
-        continue-on-error: true
+          name: codeql-sarif
+          path: results/**/*.sarif
