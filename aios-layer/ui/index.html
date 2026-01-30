@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AIOS Layer - Status</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; background: #0b0e14; color: #e6e6e6; }
+      .card { background: #151a24; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
+      pre { white-space: pre-wrap; }
+      button { background: #3b82f6; color: white; border: 0; padding: 0.5rem 1rem; border-radius: 6px; }
+    </style>
+  </head>
+  <body>
+    <h1>AIOS Layer</h1>
+    <p>Minimal status UI for the host agent.</p>
+    <button id="refresh">Refresh</button>
+    <div class="card">
+      <h2>GPUs</h2>
+      <pre id="gpus">Loading...</pre>
+    </div>
+    <div class="card">
+      <h2>Leases</h2>
+      <pre id="leases">Loading...</pre>
+    </div>
+    <div class="card">
+      <h2>Metrics</h2>
+      <pre id="metrics">Loading...</pre>
+    </div>
+    <script>
+      const agentBase = "http://localhost:8088";
+      async function load() {
+        const [gpus, leases, metrics] = await Promise.all([
+          fetch(`${agentBase}/v1/gpus`).then(r => r.json()),
+          fetch(`${agentBase}/v1/leases`).then(r => r.json()),
+          fetch(`${agentBase}/metrics`).then(r => r.text())
+        ]);
+        document.getElementById("gpus").textContent = JSON.stringify(gpus, null, 2);
+        document.getElementById("leases").textContent = JSON.stringify(leases, null, 2);
+        document.getElementById("metrics").textContent = metrics;
+      }
+      document.getElementById("refresh").addEventListener("click", load);
+      load();
+    </script>
+  </body>
+</html>

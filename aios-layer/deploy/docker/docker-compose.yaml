@@ -1,0 +1,92 @@
+version: "3.9"
+
+services:
+  agent:
+    build:
+      context: ..
+      dockerfile: docker/agent.Dockerfile
+    ports:
+      - "8088:8088"
+    volumes:
+      - ../config/aios.yaml:/etc/aios/aios.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - AIOS_ENV=local
+    networks:
+      - aios-net
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  vllm:
+    image: vllm/vllm-openai:v0.6.3
+    profiles: ["gpu"]
+    ports:
+      - "8000:8000"
+    environment:
+      - HF_HOME=/data/hf
+      - VLLM_LOGGING_LEVEL=info
+    command:
+      - "--model"
+      - "${AIOS_MODEL:-TinyLlama/TinyLlama-1.1B-Chat-v1.0}"
+      - "--served-model-name"
+      - "aios-demo"
+      - "--port"
+      - "8000"
+      - "--max-model-len"
+      - "2048"
+      - "--gpu-memory-utilization"
+      - "0.90"
+      - "--max-num-batched-tokens"
+      - "2048"
+      - "--max-num-seqs"
+      - "16"
+    volumes:
+      - vllm-cache:/data/hf
+    networks:
+      - aios-net
+    device_requests:
+      - driver: nvidia
+        count: 1
+        capabilities: [gpu]
+
+  vllm-cpu:
+    image: vllm/vllm-openai:v0.6.3
+    profiles: ["cpu"]
+    ports:
+      - "8001:8000"
+    environment:
+      - HF_HOME=/data/hf
+      - VLLM_USE_CPU=1
+    command:
+      - "--model"
+      - "${AIOS_MODEL_CPU:-TinyLlama/TinyLlama-1.1B-Chat-v1.0}"
+      - "--served-model-name"
+      - "aios-demo-cpu"
+      - "--port"
+      - "8000"
+      - "--max-model-len"
+      - "1024"
+      - "--device"
+      - "cpu"
+    volumes:
+      - vllm-cache:/data/hf
+    networks:
+      - aios-net
+
+  ui:
+    image: nginx:1.27-alpine
+    profiles: ["ui"]
+    ports:
+      - "8080:80"
+    volumes:
+      - ../ui:/usr/share/nginx/html:ro
+    networks:
+      - aios-net
+
+volumes:
+  vllm-cache: {}
+
+networks:
+  aios-net: {}

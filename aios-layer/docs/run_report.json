@@ -1,0 +1,47 @@
+{
+  "inputs_final": {
+    "project_name": "aios-layer",
+    "primary_outcomes": "AI/GPU OS-layer MVP with host agent, vLLM runtime, CLI, and UI",
+    "scope_constraints": "none",
+    "browsing": "disabled",
+    "timezone": "UTC",
+    "energy_basis": "landauer_context",
+    "tensor_method": "tensor_power",
+    "arbitration_method": "super_learner",
+    "prior_art_domains": ["papers", "patents", "products", "repos"],
+    "budget_limit": "unspecified",
+    "evaluation_metrics": ["accuracy", "f1", "latency_ms", "energy_J", "cost_$"],
+    "safety_policies": "standard",
+    "host_os": "Ubuntu 24.04 LTS",
+    "gpu_vendor_model": "NVIDIA RTX-class + recent driver",
+    "primary_workloads": "LLM inference",
+    "isolation_target": "containers+VM option",
+    "roadmap_mode": "single-machine first",
+    "agent_language": "Go"
+  },
+  "correction_log": [
+    {
+      "field": "inputs_final",
+      "old": "unknown",
+      "new": "defaults applied",
+      "reason": "user inputs not provided"
+    }
+  ],
+  "calls": [],
+  "arbiter_summary": {
+    "strategy": "super_learner",
+    "choice": "knee point (balanced latency/cost)",
+    "pareto_points": [
+      "vLLM GPU serving",
+      "CPU fallback mode"
+    ]
+  },
+  "energy_context": {
+    "basis": "landauer_context",
+    "notes": "kT ln 2 floor noted qualitatively"
+  },
+  "verdict": {
+    "novelty": "incremental",
+    "confidence_0to5": 2
+  }
+}
