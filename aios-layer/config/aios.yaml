@@ -1,0 +1,22 @@
+server:
+  listen_addr: ":8088"
+
+policy:
+  allowed_users:
+    - "local"
+  max_lease_seconds: 3600
+  default_lease_seconds: 900
+  max_concurrent_leases: 1
+  gpu_quota:
+    local: 1
+
+runtime:
+  engine: "docker"
+  network: "aios-net"
+  allowed_images:
+    - "vllm/vllm-openai:v0.6.3"
+  default_timeout_seconds: 120
+
+gpu:
+  discovery: "nvml"
+  mock_count: 0

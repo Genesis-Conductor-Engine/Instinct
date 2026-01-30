@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aios-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aios-agent
+  template:
+    metadata:
+      labels:
+        app: aios-agent
+    spec:
+      containers:
+        - name: aios-agent
+          image: aios/agent:latest
+          ports:
+            - containerPort: 8088
+          volumeMounts:
+            - name: config
+              mountPath: /etc/aios/aios.yaml
+              subPath: aios.yaml
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+      volumes:
+        - name: config
+          configMap:
+            name: aios-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aios-agent
+spec:
+  selector:
+    app: aios-agent
+  ports:
+    - port: 8088
+      targetPort: 8088
