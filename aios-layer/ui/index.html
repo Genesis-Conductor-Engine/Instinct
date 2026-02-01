@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>AIOS Layer Dashboard</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 2rem;
+        background: #0b0f14;
+        color: #e6edf3;
+      }
+      .card {
+        background: #111820;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      }
+      button {
+        background: #2d7dff;
+        color: #fff;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      pre {
+        background: #0b0f14;
+        padding: 0.75rem;
+        border-radius: 8px;
+        overflow: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>AIOS Layer</h1>
+    <div class="card">
+      <h2>GPU Inventory</h2>
+      <button onclick="loadGPUs()">Refresh GPUs</button>
+      <pre id="gpus">Loading...</pre>
+    </div>
+    <div class="card">
+      <h2>Active Leases</h2>
+      <button onclick="loadLeases()">Refresh Leases</button>
+      <pre id="leases">Loading...</pre>
+    </div>
+    <script>
+      const agent = localStorage.getItem('agent') || 'http://127.0.0.1:8080';
+
+      async function loadGPUs() {
+        const resp = await fetch(`${agent}/v1/gpus`);
+        const data = await resp.json();
+        document.getElementById('gpus').textContent = JSON.stringify(data, null, 2);
+      }
+
+      async function loadLeases() {
+        const resp = await fetch(`${agent}/v1/leases`);
+        const data = await resp.json();
+        document.getElementById('leases').textContent = JSON.stringify(data, null, 2);
+      }
+
+      loadGPUs();
+      loadLeases();
+    </script>
+  </body>
+</html>

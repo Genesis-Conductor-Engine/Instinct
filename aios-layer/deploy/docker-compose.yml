@@ -1,0 +1,26 @@
+version: "3.9"
+services:
+  aios-agent:
+    build:
+      context: ..
+      dockerfile: docker/agent.Dockerfile
+    command: ["/usr/local/bin/aios-agent", "-config", "/etc/aios/aios.yaml"]
+    volumes:
+      - ../config/aios.yaml:/etc/aios/aios.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8080:8080"
+  vllm:
+    build:
+      context: ..
+      dockerfile: docker/vllm.Dockerfile
+    environment:
+      MODEL_NAME: TinyLlama/TinyLlama-1.1B-Chat-v1.0
+      PORT: "8000"
+    ports:
+      - "8000:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
