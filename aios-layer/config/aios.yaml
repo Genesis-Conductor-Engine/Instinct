@@ -1,0 +1,16 @@
+server:
+  listen_address: ":8080"
+policy:
+  max_gpus_per_user: 1
+  max_duration_sec: 1800
+scheduler:
+  lease_ttl_seconds: 30
+runtime:
+  docker_socket: "/var/run/docker.sock"
+  model_image: "aios-layer-vllm:local"
+  model_port: 8000
+  enable_launch: false
+model:
+  endpoint: "http://127.0.0.1:8000/v1/chat/completions"
+metrics:
+  enabled: true
