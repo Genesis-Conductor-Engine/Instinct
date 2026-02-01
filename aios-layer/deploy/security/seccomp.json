@@ -1,0 +1,6 @@
+{
+  "defaultAction": "SCMP_ACT_ERRNO",
+  "syscalls": [
+    {"names": ["read", "write", "exit", "futex", "epoll_wait", "epoll_ctl", "clock_gettime", "nanosleep", "rt_sigreturn", "rt_sigaction", "rt_sigprocmask", "openat", "close", "socket", "connect", "accept", "bind", "listen", "getsockname", "getpeername", "setsockopt", "getsockopt", "stat", "fstat", "lseek", "mmap", "munmap", "brk", "mprotect", "arch_prctl"], "action": "SCMP_ACT_ALLOW"}
+  ]
+}
