@@ -93,8 +93,9 @@ func (s *Scheduler) ReapExpired() {
 
 func (s *Scheduler) availableGPUIndices() []int {
 	used := make(map[int]bool)
+	now := time.Now()
 	for _, lease := range s.leases {
-		if time.Now().Before(lease.ExpiresAt) {
+		if now.Before(lease.ExpiresAt) {
 			used[lease.GPUIndex] = true
 		}
 	}
