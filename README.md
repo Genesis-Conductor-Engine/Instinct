@@ -57,6 +57,9 @@ python -m src.main
 # Quick CLI demo (ingest + analyze)
 python -m src.cli ingest samples/cve_demo.json
 python -m src.cli analyze --mode arbiter-demo
+
+# A2A ingestion layer demo (exports CelestialBody JSONL)
+python -m src.cli ingest-a2a . ./aios-layer --output artifacts/celestial_bodies.jsonl
 ```
 
 ### Running the A.U.R.O.R.A. Web Interface
@@ -90,6 +93,9 @@ docker run -it --rm \
   -v $(pwd)/samples:/app/samples:ro \
   cve-matter:cuda \
   python -m src.cli analyze --mode arbiter-demo
+
+# A2A ingestion layer demo (exports CelestialBody JSONL)
+python -m src.cli ingest-a2a . ./aios-layer --output artifacts/celestial_bodies.jsonl
 ```
 
 ## Configuration
