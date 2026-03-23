@@ -31,15 +31,29 @@ dependencies = [
     "python-dateutil>=2.8.2",
     "pyyaml>=6.0",
     "structlog>=23.1.0",
+    # Neurohumogenistic Agent dependencies
+    "anthropic>=0.18.0",
+    "opentelemetry-api>=1.22.0",
+    "opentelemetry-sdk>=1.22.0",
+    "opentelemetry-exporter-otlp>=1.22.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.21.0",
     "flake8>=6.1.0",
     "black>=23.7.0",
     "mypy>=1.5.0",
+    "ruff>=0.1.0",
+]
+test = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.21.0",
+    "httpx>=0.25.0",
+    "junitparser>=3.1.0",
 ]
 cuda = [
     "torch>=2.0.0",
@@ -47,6 +61,10 @@ cuda = [
 ml = [
     "xgboost>=2.0.0",
     "lightgbm>=4.0.0",
+]
+workspace = [
+    "google-auth-oauthlib>=1.1.0",
+    "google-api-python-client>=2.111.0",
 ]
 
 [project.urls]
