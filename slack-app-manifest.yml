@@ -1,0 +1,56 @@
+_metadata:
+  major_version: 1
+  minor_version: 1
+
+display_information:
+  name: Genesis Conductor
+  description: Neurohumogenistic Workspace Integration for the Genesis Conductor platform
+  background_color: "#1a1a2e"
+  long_description: |
+    Genesis Conductor hybridizes Google Workspace telemetry with the Instinct Platform's
+    thermodynamic kernel. Treat emails, tasks, and notes as continuous telemetry data
+    for energetic intelligence and the 13 revenue streams.
+
+features:
+  app_home:
+    home_tab_enabled: true
+    messages_tab_enabled: false
+
+  bot_user:
+    display_name: Genesis Conductor
+    always_online: true
+
+  slash_commands:
+    - command: /genesis
+      url: https://api.genesisconductor.io/slack/commands
+      description: Interact with the Genesis Conductor nervous system
+      usage_hint: "[status | sync | cold-snap | audit <text>]"
+      should_escape: false
+
+  event_subscriptions:
+    bot_events:
+      - app_mention
+      - message.im
+
+oauth_config:
+  scopes:
+    bot:
+      - app_mentions:read
+      - channels:history
+      - chat:write
+      - chat:write.customize
+      - commands
+      - im:history
+      - im:write
+      - users:read
+      - incoming-webhook
+
+settings:
+  event_subscriptions:
+    request_url: https://api.genesisconductor.io/slack/events
+  interactivity:
+    is_enabled: true
+    request_url: https://api.genesisconductor.io/slack/interactions
+  org_deploy_enabled: true
+  socket_mode_enabled: false
+  token_rotation_enabled: false

@@ -21,6 +21,22 @@ from .thermodynamic_kernel import ThermodynamicKernel, ThermodynamicState
 
 logger = structlog.get_logger(__name__)
 
+# Slack notifier (lazy import to keep dependency optional)
+_slack_notifier = None
+
+
+def _get_slack_notifier() -> Optional[Any]:
+    global _slack_notifier
+    if _slack_notifier is None:
+        try:
+            import os
+            from src.integrations.slack.notifier import SlackNotifier
+            if os.getenv("SLACK_WEBHOOK_URL") or os.getenv("SLACK_BOT_TOKEN"):
+                _slack_notifier = SlackNotifier()
+        except ImportError:
+            pass
+    return _slack_notifier
+
 
 @dataclass
 class OrchestratorConfig:
@@ -554,6 +570,7 @@ class WorkspaceOrchestrator:
         Perform Yennefer hourly sync.
 
         Synchronizes all workspace inputs with Instinct Platform telemetry.
+        Posts results to Slack.
         """
         logger.info("orchestrator.yennefer_sync_started")
 
@@ -576,7 +593,25 @@ class WorkspaceOrchestrator:
             pipeline_value=self._state.estimated_pipeline_value_usd
         )
 
+        # Post to Slack
+        slack = _get_slack_notifier()
+        if slack:
+            try:
+                await slack.post_sync_report(report)
+            except Exception as e:
+                logger.warning("orchestrator.slack_post_failed", error=str(e))
+
         return report
+
+    async def post_compliance_alert(
+        self,
+        directive_id: str,
+        violations: list[str],
+    ) -> None:
+        """Post a PSF compliance violation to Slack."""
+        slack = _get_slack_notifier()
+        if slack:
+            await slack.post_compliance_alert(directive_id, violations)
 
 
 async def main():

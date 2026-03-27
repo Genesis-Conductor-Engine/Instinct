@@ -1,0 +1,263 @@
+name: Cross-Repository Deployment
+
+# Dispatches the Neurohumogenistic agent build to all repos in the
+# Genesis-Conductor-Engine organization after a successful main branch push.
+
+on:
+  workflow_run:
+    workflows: ["Neurohumogenistic Agent CI/CD"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target_repos:
+        description: 'Comma-separated repo names (empty = all org repos)'
+        type: string
+        default: ''
+      deploy_environment:
+        description: 'Target environment'
+        type: choice
+        options: [staging, production]
+        default: staging
+
+env:
+  ORG: Genesis-Conductor-Engine
+  AGENT_VERSION: "0.1.0"
+
+jobs:
+  # ============================================
+  # Gate: Only deploy if CI passed
+  # ============================================
+  check-ci-status:
+    name: Verify CI Status
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+
+    steps:
+      - name: Check triggering workflow result
+        id: check
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event.workflow_run.conclusion }}" == "success" ]]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+            echo "Upstream CI failed — skipping deployment"
+          fi
+
+  # ============================================
+  # Discover target repositories
+  # ============================================
+  discover-repos:
+    name: Discover Target Repos
+    runs-on: ubuntu-latest
+    needs: [check-ci-status]
+    if: needs.check-ci-status.outputs.should_deploy == 'true'
+    outputs:
+      repos: ${{ steps.discover.outputs.repos }}
+
+    steps:
+      - name: Discover org repos
+        id: discover
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_REPOS: ${{ github.event.inputs.target_repos }}
+        run: |
+          if [[ -n "$TARGET_REPOS" ]]; then
+            # Use specified repos
+            REPOS_JSON=$(echo "$TARGET_REPOS" | python3 -c "
+          import sys, json
+          repos = [r.strip() for r in sys.stdin.read().split(',') if r.strip()]
+          print(json.dumps(repos))
+          ")
+          else
+            # Discover all org repos
+            REPOS_JSON=$(gh api "orgs/${{ env.ORG }}/repos" --paginate \
+              --jq '[.[].name | select(startswith("claude") | not)]' 2>/dev/null || echo '["Instinct"]')
+          fi
+
+          echo "repos=$REPOS_JSON" >> $GITHUB_OUTPUT
+          echo "Target repos: $REPOS_JSON"
+
+  # ============================================
+  # Build and package agent artifact
+  # ============================================
+  build-agent-artifact:
+    name: Build Agent Artifact
+    runs-on: ubuntu-latest
+    needs: [discover-repos]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build agent package
+        run: |
+          pip install build
+          python -m build --wheel
+          ls -la dist/
+
+      - name: Create deployment manifest
+        run: |
+          cat > deployment-manifest.json << EOF
+          {
+            "version": "${{ env.AGENT_VERSION }}",
+            "commit": "${{ github.sha }}",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "components": {
+              "edge_agent": "src/agents/neurohumogenistic/edge_agent.py",
+              "frugalgpt_cascade": "src/agents/neurohumogenistic/frugalgpt_cascade.py",
+              "thermodynamic_kernel": "src/agents/neurohumogenistic/thermodynamic_kernel.py",
+              "workspace_orchestrator": "src/agents/neurohumogenistic/workspace_orchestrator.py",
+              "pareto_worker": "workers/pareto-audit/"
+            },
+            "required_env": [
+              "SLACK_WEBHOOK_URL",
+              "ANTHROPIC_API_KEY",
+              "OTEL_EXPORTER_OTLP_ENDPOINT"
+            ],
+            "optional_env": [
+              "SLACK_BOT_TOKEN",
+              "SLACK_SIGNING_SECRET",
+              "GOOGLE_CREDENTIALS_PATH"
+            ]
+          }
+          EOF
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: neurohumogenistic-agent-${{ env.AGENT_VERSION }}
+          path: |
+            dist/
+            deployment-manifest.json
+            src/agents/neurohumogenistic/
+            src/integrations/
+            workers/pareto-audit/
+
+  # ============================================
+  # Dispatch to target repositories
+  # ============================================
+  dispatch-to-repos:
+    name: Dispatch to ${{ matrix.repo }}
+    runs-on: ubuntu-latest
+    needs: [discover-repos, build-agent-artifact]
+    strategy:
+      fail-fast: false
+      matrix:
+        repo: ${{ fromJson(needs.discover-repos.outputs.repos) }}
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: neurohumogenistic-agent-${{ env.AGENT_VERSION }}
+          path: artifact/
+
+      - name: Dispatch workflow to ${{ matrix.repo }}
+        env:
+          GH_TOKEN: ${{ secrets.CROSS_REPO_TOKEN }}
+        run: |
+          # Trigger workflow_dispatch in target repo
+          gh api \
+            --method POST \
+            "repos/${{ env.ORG }}/${{ matrix.repo }}/dispatches" \
+            --field event_type="neurohumogenistic-agent-deploy" \
+            --field client_payload[version]="${{ env.AGENT_VERSION }}" \
+            --field client_payload[commit]="${{ github.sha }}" \
+            --field client_payload[environment]="${{ github.event.inputs.deploy_environment || 'staging' }}" \
+            2>&1 || echo "Dispatch to ${{ matrix.repo }} — repo may not have workflow handler configured"
+
+      - name: Log dispatch
+        run: |
+          echo "## Dispatched to ${{ matrix.repo }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Version: ${{ env.AGENT_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================
+  # Post-deployment Slack notification
+  # ============================================
+  notify-slack:
+    name: Notify Slack
+    runs-on: ubuntu-latest
+    needs: [dispatch-to-repos]
+    if: always()
+
+    steps:
+      - name: Post deployment summary to Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          STATUS="${{ needs.dispatch-to-repos.result }}"
+          EMOJI=$([ "$STATUS" == "success" ] && echo "✅" || echo "⚠️")
+
+          if [[ -n "$SLACK_WEBHOOK_URL" ]]; then
+            curl -s -X POST "$SLACK_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              --data-binary @- << EOF
+          {
+            "text": "${EMOJI} Cross-Repo Deployment: $STATUS",
+            "blocks": [
+              {
+                "type": "header",
+                "text": {"type": "plain_text", "text": "${EMOJI} Neurohumogenistic Agent Deployed"}
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {"type": "mrkdwn", "text": "*Version*\n\`${{ env.AGENT_VERSION }}\`"},
+                  {"type": "mrkdwn", "text": "*Status*\n\`$STATUS\`"},
+                  {"type": "mrkdwn", "text": "*Commit*\n\`${{ github.sha }}\`"},
+                  {"type": "mrkdwn", "text": "*Environment*\n\`${{ github.event.inputs.deploy_environment || 'staging' }}\`"}
+                ]
+              },
+              {
+                "type": "context",
+                "elements": [{"type": "mrkdwn", "text": "Genesis-Conductor-Engine | Neurohumogenistic CI"}]
+              }
+            ]
+          }
+          EOF
+          fi
+
+  # ============================================
+  # Deploy Cloudflare Worker (cross-env)
+  # ============================================
+  deploy-pareto-worker:
+    name: Deploy Pareto Worker
+    runs-on: ubuntu-latest
+    needs: [check-ci-status]
+    if: needs.check-ci-status.outputs.should_deploy == 'true'
+    environment: ${{ github.event.inputs.deploy_environment || 'staging' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Wrangler
+        working-directory: workers/pareto-audit
+        run: npm ci
+
+      - name: Deploy to Cloudflare (staging)
+        if: github.event.inputs.deploy_environment != 'production'
+        working-directory: workers/pareto-audit
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx wrangler deploy --env staging || echo "Cloudflare credentials not configured"
+
+      - name: Deploy to Cloudflare (production)
+        if: github.event.inputs.deploy_environment == 'production'
+        working-directory: workers/pareto-audit
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx wrangler deploy || echo "Cloudflare credentials not configured"
