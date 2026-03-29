@@ -213,7 +213,8 @@ function auditOpportunity(opportunity: PipelineOpportunity, env: Env): AuditResu
 
   // Calculate estimated ROI (simplified model)
   const estimatedCost = opportunity.acv_usd * 0.05; // 5% of ACV as sales cost
-  const roiEstimate = opportunity.acv_usd / estimatedCost;
+  const estimatedCost = opportunity.acv_usd * 0.05; // 5% of ACV as sales cost
+  const roiEstimate = estimatedCost > 0 ? opportunity.acv_usd / estimatedCost : 0;
 
   if (roiEstimate < roiTarget) {
     violations.push(`ROI estimate ${roiEstimate.toFixed(1)}:1 below ${roiTarget}:1 target`);
