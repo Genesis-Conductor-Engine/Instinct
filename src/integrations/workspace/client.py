@@ -339,8 +339,8 @@ Cognitive recovery protocols active""",
 
         except Exception as e:
             logger.error("workspace_client.get_tasks_failed", error=str(e))
-            # Return mock data on failure
-            return self._get_mock_tasks()
+            return []
+
 
     def _get_mock_tasks(self) -> list[dict]:
         """Return mock tasks for development."""
