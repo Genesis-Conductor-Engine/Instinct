@@ -118,7 +118,7 @@ class EdgeAgent:
         logger.info(
             "edge_agent.handler_registered",
             directive_type=directive_type.value,
-            handler=handler.__name__
+            handler=getattr(handler, '__name__', repr(handler))
         )
 
     def classify_directive(self, content: str, source: str) -> DirectiveType:
@@ -420,7 +420,7 @@ class EdgeAgent:
             except Exception as e:
                 logger.error(
                     "edge_agent.handler_error",
-                    handler=handler.__name__,
+                    handler=getattr(handler, '__name__', repr(handler)),
                     directive_id=directive.id,
                     error=str(e)
                 )
