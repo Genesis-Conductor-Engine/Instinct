@@ -104,8 +104,8 @@ def parse_mass_tests(mass_test_files: list[Path]) -> dict:
             with open(batch_file) as f:
                 batch_data = json.load(f)
                 batches.append(batch_data)
-        except Exception:
-            pass
+        except (IOError, json.JSONDecodeError) as e:
+            print(f"Warning: Failed to parse mass test file {batch_file}: {e}")
 
     if not batches:
         return {"batches": []}
