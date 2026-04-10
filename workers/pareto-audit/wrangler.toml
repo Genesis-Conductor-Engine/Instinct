@@ -6,6 +6,11 @@ name = "pareto-audit"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
+# HTTP routes (top-level, not under [triggers])
+[[routes]]
+pattern = "pareto.genesisconductor.io/*"
+zone_name = "genesisconductor.io"
+
 [vars]
 ARR_FLOOR_USD = "25000"
 ROI_TARGET = "10"
@@ -13,19 +18,40 @@ MIN_ACV_USD = "100000"
 MAX_ACV_USD = "5000000"
 SALES_CYCLE_DAYS = "270"
 
-[triggers]
-routes = [
-    { pattern = "pareto.genesisconductor.io/*", zone_name = "genesisconductor.io" }
-]
+# KV and D1 bindings - use environment-specific configs for real IDs
+# For local dev: wrangler dev --local
+# For staging: wrangler deploy --env staging
+# For production: set IDs via CI secrets or wrangler.toml.example pattern
 
+[env.staging]
+[[env.staging.kv_namespaces]]
+binding = "AUDIT_CACHE"
+id = "${STAGING_KV_ID}"
+
+[[env.staging.d1_databases]]
+binding = "AUDIT_DB"
+database_name = "pareto-audit-staging"
+database_id = "${STAGING_D1_ID}"
+
+[env.production]
+[[env.production.kv_namespaces]]
+binding = "AUDIT_CACHE"
+id = "${PRODUCTION_KV_ID}"
+
+[[env.production.d1_databases]]
+binding = "AUDIT_DB"
+database_name = "pareto-audit"
+database_id = "${PRODUCTION_D1_ID}"
+
+# Local development bindings (created via wrangler d1/kv create --local)
 [[kv_namespaces]]
 binding = "AUDIT_CACHE"
-id = "your-kv-namespace-id"
+id = "local-dev-kv"
 
 [[d1_databases]]
 binding = "AUDIT_DB"
-database_name = "pareto-audit"
-database_id = "your-d1-database-id"
+database_name = "pareto-audit-local"
+database_id = "local-dev-d1"
 
 [observability]
 enabled = true

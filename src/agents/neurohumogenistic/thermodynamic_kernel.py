@@ -203,12 +203,23 @@ class IPMIReader:
     Reader for IPMI (Intelligent Platform Management Interface) sensors.
 
     Uses ipmitool or direct /dev/ipmi0 access for power metrics.
+    Credentials are passed via constructor or environment variables.
     """
 
-    def __init__(self, ipmi_host: Optional[str] = None, use_local: bool = True):
+    def __init__(
+        self,
+        ipmi_host: Optional[str] = None,
+        ipmi_username: Optional[str] = None,
+        ipmi_password: Optional[str] = None,
+        use_local: bool = True,
+    ):
         self.ipmi_host = ipmi_host
         self.use_local = use_local
         self._available = self._check_availability()
+
+        # Get credentials from args or environment - never hardcode
+        self.ipmi_username = ipmi_username or os.getenv("IPMI_USERNAME")
+        self.ipmi_password = ipmi_password or os.getenv("IPMI_PASSWORD")
 
         if self._available:
             logger.info("ipmi.available", local=use_local, host=ipmi_host)
@@ -222,29 +233,49 @@ class IPMIReader:
         return self.ipmi_host is not None
 
     async def read_power_sensors(self) -> list[PowerReading]:
-        """Read power-related sensors from IPMI."""
+        """Read power-related sensors from IPMI using async subprocess."""
         readings = []
 
         if not self._available:
             return readings
 
-        try:
-            import subprocess
+        # Require explicit credentials for remote IPMI
+        if self.ipmi_host and (not self.ipmi_username or not self.ipmi_password):
+            logger.warning(
+                "ipmi.credentials_missing",
+                hint="Set IPMI_USERNAME and IPMI_PASSWORD env vars for remote access"
+            )
+            return readings
 
+        process = None
+
+        try:
             cmd = ["ipmitool"]
             if self.ipmi_host:
-                cmd.extend(["-H", self.ipmi_host, "-U", "admin", "-P", "admin"])
+                cmd.extend(["-H", self.ipmi_host, "-U", self.ipmi_username, "-P", self.ipmi_password])
             cmd.extend(["sdr", "type", "Current"])
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, _stderr = await asyncio.wait_for(process.communicate(), timeout=10)
 
-            if result.returncode == 0:
-                readings.extend(self._parse_sdr_output(result.stdout))
+            if process.returncode == 0:
+                readings.extend(self._parse_sdr_output(stdout.decode(errors="replace")))
 
         except FileNotFoundError:
             logger.debug("ipmi.ipmitool_not_found")
-        except subprocess.TimeoutExpired:
+        except asyncio.TimeoutError:
             logger.warning("ipmi.timeout")
+            if process is not None and process.returncode is None:
+                process.terminate()
+                try:
+                    await asyncio.wait_for(process.wait(), timeout=1)
+                except asyncio.TimeoutError:
+                    process.kill()
+                    await process.wait()
         except Exception as e:
             logger.error("ipmi.read_error", error=str(e))
 
@@ -330,11 +361,17 @@ class ThermodynamicKernel:
         )
 
     def _setup_otel_instruments(self) -> None:
-        """Set up OpenTelemetry metric instruments."""
-        self._power_gauge = self.otel_meter.create_gauge(
+        """Set up OpenTelemetry metric instruments.
+
+        Uses create_observable_gauge with callbacks since the OTel Python SDK
+        doesn't have a settable gauge - values must be observed via callbacks.
+        """
+        # Observable gauge for power - callback reads from self._state
+        self._power_gauge = self.otel_meter.create_observable_gauge(
             name="instinct.thermodynamic.power_watts",
             description="Current power consumption in watts",
-            unit="W"
+            unit="W",
+            callbacks=[self._observe_power],
         )
 
         self._energy_counter = self.otel_meter.create_counter(
@@ -343,11 +380,21 @@ class ThermodynamicKernel:
             unit="J"
         )
 
-        self._efficiency_gauge = self.otel_meter.create_gauge(
+        # Observable gauge for efficiency
+        self._efficiency_gauge = self.otel_meter.create_observable_gauge(
             name="instinct.thermodynamic.efficiency_eta",
             description="Thermodynamic efficiency ratio (0-1)",
-            unit="1"
+            unit="1",
+            callbacks=[self._observe_efficiency],
         )
+
+    def _observe_power(self, options):
+        """OTel callback for power gauge."""
+        yield self._state.total_power_watts, {}
+
+    def _observe_efficiency(self, options):
+        """OTel callback for efficiency gauge."""
+        yield self._state.efficiency_eta, {}
 
     def register_state_callback(
         self,
@@ -527,16 +574,15 @@ class ThermodynamicKernel:
         return T_ambient + total_power * thermal_resistance
 
     def _export_to_otel(self) -> None:
-        """Export current state to OpenTelemetry."""
-        if self._power_gauge:
-            self._power_gauge.set(self._state.total_power_watts)
+        """Export current state to OpenTelemetry.
 
-        if self._energy_counter:
-            # Counter expects delta, not absolute
-            pass  # Would need delta tracking
-
-        if self._efficiency_gauge:
-            self._efficiency_gauge.set(self._state.efficiency_eta)
+        Note: Power and efficiency are exported via observable gauge callbacks
+        (_observe_power, _observe_efficiency) which read from self._state.
+        This method only handles the energy counter increment.
+        """
+        # Energy counter - would need delta tracking for proper increments
+        # For now, skip since observable gauges handle power/efficiency
+        pass
 
     def get_state(self) -> ThermodynamicState:
         """Get current thermodynamic state."""

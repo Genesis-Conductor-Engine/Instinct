@@ -279,11 +279,7 @@ def build_directive_block(directive: Any, result: dict) -> list:
             "text": {
                 "type": "mrkdwn",
                 "text": f"{emoji} *{label}* · Priority `{directive.priority}/10`\n`{directive.id}`"
-            },
-            "accessory": {
-                "type": "mrkdwn",
-                "text": f"Tier {tier} ({tier_model})"
-            } if False else None  # Accessory must be a valid block element
+            }
         },
         {
             "type": "section",

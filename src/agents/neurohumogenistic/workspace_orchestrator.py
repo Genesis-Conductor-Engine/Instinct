@@ -147,34 +147,64 @@ class ParetoAuditFilter:
         return True
 
     def _verify_arr_floor(self, directive: WorkspaceDirective) -> bool:
-        """Verify $25k Year 1 ARR floor."""
+        """Verify $25k Year 1 ARR floor.
+
+        Returns True if:
+        - A numeric ARR >= floor is found
+        - No numeric ARR is found (can't verify, allow through with warning)
+
+        Returns False if:
+        - A numeric ARR < floor is explicitly found
+        """
         content = directive.content
 
-        # Look for dollar amounts
+        # Look for dollar amounts with optional k/m suffix
+        # Matches: $50k, $50,000, 50k arr, 25000 acv, etc.
         import re
-        amounts = re.findall(r'\$[\d,]+(?:\.\d{2})?|[\d,]+k?\s*(?:arr|acv)', content.lower())
+        amounts = re.findall(
+            r'\$[\d,]+(?:\.\d{2})?[km]?|[\d,]+[km]?\s*(?:arr|acv)',
+            content.lower()
+        )
 
+        found_any_amount = False
         for amount in amounts:
             try:
-                # Parse amount
-                clean = amount.replace('$', '').replace(',', '').replace('k', '000')
+                # Check for k/m suffix before stripping
+                multiplier = 1
+                if 'k' in amount:
+                    multiplier = 1000
+                elif 'm' in amount:
+                    multiplier = 1_000_000
+
+                # Parse amount - remove $, commas, k, m
+                clean = amount.replace('$', '').replace(',', '').replace('k', '').replace('m', '')
                 clean = ''.join(c for c in clean if c.isdigit() or c == '.')
                 if clean:
-                    value = float(clean)
+                    value = float(clean) * multiplier
+                    found_any_amount = True
                     if value >= self.config.arr_floor_usd:
-                        return True
+                        return True  # Found compliant ARR
+                    else:
+                        # Found ARR below floor - reject
+                        logger.info(
+                            "pareto_filter.arr_below_floor",
+                            directive_id=directive.id,
+                            arr_found=value,
+                            floor=self.config.arr_floor_usd
+                        )
+                        return False
             except ValueError:
                 pass
 
-        # If no amount found but content suggests compliance
-        if any(term in content.lower() for term in ['arr', 'annual', 'recurring']):
+        # If no numeric amount found but content mentions ARR terms
+        if not found_any_amount and any(term in content.lower() for term in ['arr', 'annual', 'recurring']):
             logger.warning(
                 "pareto_filter.arr_not_verified",
                 directive_id=directive.id,
                 hint="No numeric ARR value found"
             )
 
-        return True  # Allow through if no explicit violation
+        return True  # No explicit ARR found - allow through
 
     def _verify_acv_range(self, directive: WorkspaceDirective) -> bool:
         """Verify ACV is within $100K-$5M range for 270-day cycle."""

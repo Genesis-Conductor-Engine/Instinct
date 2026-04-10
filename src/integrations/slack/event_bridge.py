@@ -66,10 +66,23 @@ class SlackEventBridge:
         Verify Slack request signature using HMAC-SHA256.
 
         Prevents replay attacks with 5-minute timestamp window.
+        Rejects unsigned requests by default for security.
         """
         if not self.signing_secret:
-            logger.warning("slack_bridge.no_signing_secret")
-            return True  # Allow in development
+            # Only allow unsigned requests with explicit opt-in for local dev
+            allow_insecure = os.getenv("ALLOW_INSECURE_SLACK_SIGNATURES", "").lower() == "true"
+            if allow_insecure:
+                logger.warning(
+                    "slack_bridge.insecure_mode",
+                    hint="ALLOW_INSECURE_SLACK_SIGNATURES=true - disable in production"
+                )
+                return True
+            else:
+                logger.error(
+                    "slack_bridge.signature_verification_failed",
+                    reason="SLACK_SIGNING_SECRET not configured"
+                )
+                return False
 
         # Check timestamp to prevent replay attacks
         if abs(time.time() - int(timestamp)) > 300:

@@ -155,7 +155,7 @@ class GoogleWorkspaceClient:
 
     async def _run_in_executor(self, func: Any, *args) -> Any:
         """Run synchronous Google API call in executor."""
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, func, *args)
 
     async def get_emails(

@@ -32,7 +32,8 @@ jobs:
       - name: Install Neurohumogenistic Agent
         run: |
           # Install from Genesis-Conductor-Engine/Instinct package
-          pip install "neurohumogenistic-agent @ git+https://github.com/Genesis-Conductor-Engine/Instinct.git@${{ github.event.client_payload.commit }}#egg=cve-matter-analysis[workspace]" \
+          # Use proper PEP 508 direct reference format: name[extras] @ url
+          pip install "cve-matter-analysis[workspace] @ git+https://github.com/Genesis-Conductor-Engine/Instinct.git@${{ github.event.client_payload.commit }}" \
             || pip install anthropic opentelemetry-sdk opentelemetry-api structlog
 
       - name: Verify agent installation
