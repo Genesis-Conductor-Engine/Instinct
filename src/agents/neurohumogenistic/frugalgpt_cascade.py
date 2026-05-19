@@ -184,6 +184,7 @@ Provide comprehensive strategic analysis with:
     "risk_factors": ["identified risks"],
     "roi_projection": "10:1 ROI analysis",
     "thermodynamic_allocation": {"compute_percent": int, "recovery_percent": int},
+    "thermodynamic_allocation": {"compute": %, "recovery": %},
     "confidence": float (0-1)
 }"""
 

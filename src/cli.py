@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List
 
+from .a2a import export_jsonl, ingest_repositories
 from .pipelines.arbiter_demo import run_demo
 
 LOGGER = logging.getLogger("cve.cli")
@@ -41,6 +42,24 @@ def ingest_command(args: argparse.Namespace) -> None:
                 record.get("cvss", 0.0),
                 record.get("summary", "(no summary)"),
             )
+
+
+
+
+def ingest_a2a_command(args: argparse.Namespace) -> None:
+    repo_paths = [Path(item).expanduser().resolve() for item in args.repos]
+    bodies = ingest_repositories(repo_paths)
+
+    output_path = Path(args.output)
+    export_jsonl(bodies, output_path)
+    LOGGER.info("Exported %s celestial bodies to %s", len(bodies), output_path.expanduser().resolve())
+
+    for body in bodies:
+        LOGGER.info("Celestial body %s | mass=%.2f | gravity=%.2f", body.id, body.mass, body.gravity)
+        LOGGER.info(
+            "Atmosphere languages: %s",
+            ", ".join(body.atmosphere.get("languages", [])) or "none",
+        )
 
 
 def analyze_command(args: argparse.Namespace) -> None:
@@ -79,6 +98,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="Number of entries to preview from the ingest file",
     )
     ingest_parser.set_defaults(func=ingest_command)
+
+
+
+    ingest_a2a_parser = subparsers.add_parser(
+        "ingest-a2a",
+        help="Convert a repository into a CelestialBody JSONL artifact",
+    )
+    ingest_a2a_parser.add_argument("repos", nargs="+", help="One or more repository roots")
+    ingest_a2a_parser.add_argument(
+        "--output",
+        default="artifacts/celestial_bodies.jsonl",
+        help="Destination JSONL file",
+    )
+    ingest_a2a_parser.set_defaults(func=ingest_a2a_command)
 
     analyze_parser = subparsers.add_parser("analyze", help="Run analysis workflows")
     analyze_parser.add_argument(

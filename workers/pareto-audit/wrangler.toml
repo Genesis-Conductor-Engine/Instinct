@@ -52,6 +52,19 @@ id = "local-dev-kv"
 binding = "AUDIT_DB"
 database_name = "pareto-audit-local"
 database_id = "local-dev-d1"
+[triggers]
+routes = [
+    { pattern = "pareto.genesisconductor.io/*", zone_name = "genesisconductor.io" }
+]
+
+[[kv_namespaces]]
+binding = "AUDIT_CACHE"
+id = "your-kv-namespace-id"
+
+[[d1_databases]]
+binding = "AUDIT_DB"
+database_name = "pareto-audit"
+database_id = "your-d1-database-id"
 
 [observability]
 enabled = true
