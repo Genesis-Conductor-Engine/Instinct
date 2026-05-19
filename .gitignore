@@ -127,3 +127,4 @@ service-account.json
 
 # Aurora orchestrator output
 aurora_final_state.json
+node_modules/

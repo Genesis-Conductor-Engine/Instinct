@@ -85,7 +85,12 @@ class SlackEventBridge:
                 return False
 
         # Check timestamp to prevent replay attacks
-        if abs(time.time() - int(timestamp)) > 300:
+        try:
+            ts = int(timestamp)
+        except (ValueError, TypeError):
+            logger.warning("slack_bridge.invalid_timestamp", timestamp=timestamp)
+            return False
+        if abs(time.time() - ts) > 300:
             return False
 
         # Compute expected signature

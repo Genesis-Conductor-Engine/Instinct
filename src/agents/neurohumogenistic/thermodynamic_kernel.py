@@ -213,16 +213,11 @@ class IPMIReader:
         ipmi_password: Optional[str] = None,
         use_local: bool = True,
     ):
-    """
-
-    def __init__(self, ipmi_host: Optional[str] = None, use_local: bool = True):
         self.ipmi_host = ipmi_host
         self.use_local = use_local
-        self._available = self._check_availability()
-
-        # Get credentials from args or environment - never hardcode
         self.ipmi_username = ipmi_username or os.getenv("IPMI_USERNAME")
         self.ipmi_password = ipmi_password or os.getenv("IPMI_PASSWORD")
+        self._available = self._check_availability()
 
         if self._available:
             logger.info("ipmi.available", local=use_local, host=ipmi_host)
@@ -237,7 +232,6 @@ class IPMIReader:
 
     async def read_power_sensors(self) -> list[PowerReading]:
         """Read power-related sensors from IPMI using async subprocess."""
-        """Read power-related sensors from IPMI."""
         readings = []
 
         if not self._available:
@@ -280,25 +274,6 @@ class IPMIReader:
                 except asyncio.TimeoutError:
                     process.kill()
                     await process.wait()
-        try:
-            import subprocess
-
-            cmd = ["ipmitool"]
-            if self.ipmi_host:
-                cmd.extend(["-H", self.ipmi_host, "-U", "admin", "-P", "admin"])
-            cmd.extend(["sdr", "type", "Current"])
-
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-
-            if result.returncode == 0:
-                readings.extend(self._parse_sdr_output(result.stdout))
-
-        except FileNotFoundError:
-            logger.debug("ipmi.ipmitool_not_found")
-        except subprocess.TimeoutExpired:
-            logger.warning("ipmi.timeout")
-        except Exception as e:
-            logger.error("ipmi.read_error", error=str(e))
 
         return readings
 
@@ -387,17 +362,11 @@ class ThermodynamicKernel:
         Uses create_observable_gauge with callbacks since the OTel Python SDK
         doesn't have a settable gauge - values must be observed via callbacks.
         """
-        # Observable gauge for power - callback reads from self._state
         self._power_gauge = self.otel_meter.create_observable_gauge(
             name="instinct.thermodynamic.power_watts",
             description="Current power consumption in watts",
             unit="W",
             callbacks=[self._observe_power],
-        """Set up OpenTelemetry metric instruments."""
-        self._power_gauge = self.otel_meter.create_gauge(
-            name="instinct.thermodynamic.power_watts",
-            description="Current power consumption in watts",
-            unit="W"
         )
 
         self._energy_counter = self.otel_meter.create_counter(
@@ -406,7 +375,6 @@ class ThermodynamicKernel:
             unit="J"
         )
 
-        # Observable gauge for efficiency
         self._efficiency_gauge = self.otel_meter.create_observable_gauge(
             name="instinct.thermodynamic.efficiency_eta",
             description="Thermodynamic efficiency ratio (0-1)",
@@ -421,12 +389,6 @@ class ThermodynamicKernel:
     def _observe_efficiency(self, options):
         """OTel callback for efficiency gauge."""
         yield self._state.efficiency_eta, {}
-
-        self._efficiency_gauge = self.otel_meter.create_gauge(
-            name="instinct.thermodynamic.efficiency_eta",
-            description="Thermodynamic efficiency ratio (0-1)",
-            unit="1"
-        )
 
     def register_state_callback(
         self,

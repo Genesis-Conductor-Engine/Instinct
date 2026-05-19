@@ -396,27 +396,6 @@ class EdgeAgent:
         duplicate LLM execution, token cost, and repeated side effects for the same
         directive. The handlers in WorkspaceOrchestrator call frugalgpt.process().
         """
-        Dispatch directive to registered handlers and FrugalGPT cascade.
-
-        Routing rules:
-        - HIGH_LEVERAGE_PORTFOLIO -> Tier 3 (Opus)
-        - EXECUTION_QUEUE -> Tier 2 (Sonnet)
-        - PSF_COMPLIANCE -> Tier 1 (Haiku) + compliance scripts
-        """
-        # Route to FrugalGPT cascade based on type
-        if self.frugalgpt:
-            tier_mapping = {
-                DirectiveType.HIGH_LEVERAGE_PORTFOLIO: 3,
-                DirectiveType.DOE_MISSION_ALIGNED: 3,
-                DirectiveType.REVENUE_PIPELINE: 2,
-                DirectiveType.EXECUTION_QUEUE: 2,
-                DirectiveType.PSF_COMPLIANCE: 1,
-                DirectiveType.THERMODYNAMIC_GATE: 1,
-            }
-            tier = tier_mapping.get(directive.directive_type, 2)
-            await self.frugalgpt.process(directive, tier=tier)
-
-        # Dispatch to type-specific handlers
         for handler in self._handlers[directive.directive_type]:
             try:
                 if asyncio.iscoroutinefunction(handler):
@@ -427,7 +406,6 @@ class EdgeAgent:
                 logger.error(
                     "edge_agent.handler_error",
                     handler=getattr(handler, '__name__', repr(handler)),
-                    handler=handler.__name__,
                     directive_id=directive.id,
                     error=str(e)
                 )
