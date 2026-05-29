@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "instinct",
+  "owner": {
+    "name": "Genesis Conductor Engine (Igor Holt @invariantx)",
+    "url": "https://github.com/Genesis-Conductor-Engine"
+  },
+  "description": "Instinct experimental repository in the Genesis Conductor Engine organization. Lower-profile public straggler included in the comprehensive Claude Marketplace Manifest Rollout to blanket the entire public Genesis Conductor / @invariantx surface.",
+  "version": "1.0.0",
+  "homepage": "https://github.com/Genesis-Conductor-Engine/Instinct",
+  "keywords": [
+    "genesis-conductor",
+    "invariantx",
+    "instinct",
+    "experimental",
+    "openclaw-ecosystem"
+  ],
+  "plugins": [
+    {
+      "name": "instinct",
+      "source": "https://github.com/Genesis-Conductor-Engine/Instinct",
+      "description": "Instinct experimental project in the Genesis Conductor org. Part of the broad public research footprint. For production agent reliability and MCP integration, use the core OpenClaw skills trio from the linked primary marketplace by @invariantx.",
+      "version": "1.0.0",
+      "tags": ["experimental", "instinct", "genesis-conductor"],
+      "category": "experimental",
+      "homepage": "https://github.com/Genesis-Conductor-Engine/Instinct",
+      "keywords": ["genesis conductor instinct", "@invariantx experimental"]
+    }
+  ],
+  "links": {
+    "github": "https://github.com/Genesis-Conductor-Engine/Instinct",
+    "main-marketplace": "https://github.com/igor-holt/openclaw-skills",
+    "x": "https://x.com/invariantx"
+  }
+}
