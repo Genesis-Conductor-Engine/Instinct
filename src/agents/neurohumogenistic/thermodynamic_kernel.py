@@ -571,22 +571,10 @@ class ThermodynamicKernel:
         """Export current state to OpenTelemetry.
 
         Note: Power and efficiency are exported via observable gauge callbacks
-        (_observe_power, _observe_efficiency) which read from self._state.
-        This method only handles the energy counter increment.
+        (_observe_power, _observe_efficiency) registered in _setup_otel_metrics.
+        This method is a no-op since observable gauges handle all metrics.
         """
-        # Energy counter - would need delta tracking for proper increments
-        # For now, skip since observable gauges handle power/efficiency
         pass
-        """Export current state to OpenTelemetry."""
-        if self._power_gauge:
-            self._power_gauge.set(self._state.total_power_watts)
-
-        if self._energy_counter:
-            # Counter expects delta, not absolute
-            pass  # Would need delta tracking
-
-        if self._efficiency_gauge:
-            self._efficiency_gauge.set(self._state.efficiency_eta)
 
     def get_state(self) -> ThermodynamicState:
         """Get current thermodynamic state."""

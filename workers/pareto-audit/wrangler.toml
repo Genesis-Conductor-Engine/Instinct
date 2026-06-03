@@ -6,7 +6,7 @@ name = "pareto-audit"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
-# HTTP routes (top-level, not under [triggers])
+# HTTP routes
 [[routes]]
 pattern = "pareto.genesisconductor.io/*"
 zone_name = "genesisconductor.io"
@@ -18,32 +18,7 @@ MIN_ACV_USD = "100000"
 MAX_ACV_USD = "5000000"
 SALES_CYCLE_DAYS = "270"
 
-# KV and D1 bindings - use environment-specific configs for real IDs
-# For local dev: wrangler dev --local
-# For staging: wrangler deploy --env staging
-# For production: set IDs via CI secrets or wrangler.toml.example pattern
-
-[env.staging]
-[[env.staging.kv_namespaces]]
-binding = "AUDIT_CACHE"
-id = "${STAGING_KV_ID}"
-
-[[env.staging.d1_databases]]
-binding = "AUDIT_DB"
-database_name = "pareto-audit-staging"
-database_id = "${STAGING_D1_ID}"
-
-[env.production]
-[[env.production.kv_namespaces]]
-binding = "AUDIT_CACHE"
-id = "${PRODUCTION_KV_ID}"
-
-[[env.production.d1_databases]]
-binding = "AUDIT_DB"
-database_name = "pareto-audit"
-database_id = "${PRODUCTION_D1_ID}"
-
-# Local development bindings (created via wrangler d1/kv create --local)
+# Local development bindings (for wrangler dev --local)
 [[kv_namespaces]]
 binding = "AUDIT_CACHE"
 id = "local-dev-kv"
@@ -58,3 +33,12 @@ enabled = true
 
 [placement]
 mode = "smart"
+
+# NOTE: Staging and production environments require real KV/D1 IDs.
+# These are configured via CI secrets and substituted at deploy time.
+# See .github/workflows/cross-repo-deploy.yml for the deployment process.
+#
+# To deploy manually:
+# 1. Create KV namespace: wrangler kv:namespace create AUDIT_CACHE
+# 2. Create D1 database: wrangler d1 create pareto-audit
+# 3. Set the returned IDs in wrangler.toml or use --var flags

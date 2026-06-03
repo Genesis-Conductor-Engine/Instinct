@@ -154,57 +154,67 @@ class ParetoAuditFilter:
         - No numeric ARR is found (can't verify, allow through with warning)
 
         Returns False if:
-        - A numeric ARR < floor is explicitly found
+        - An explicitly labeled ARR/ACV amount < floor is found
         """
-        content = directive.content
+        content = directive.content.lower()
 
-        # Look for dollar amounts with optional k/m suffix
-        # Matches: $50k, $50,000, 50k arr, 25000 acv, etc.
         import re
-        amounts = re.findall(
-            r'\$[\d,]+(?:\.\d{2})?[km]?|[\d,]+[km]?\s*(?:arr|acv)',
-            content.lower()
-        )
 
-        found_any_amount = False
-        for amount in amounts:
+        # Only match amounts explicitly tied to ARR/ACV labels
+        # Pattern: "$50k arr", "25000 acv", "$100,000 arr", "arr of $50k", "acv: $100k"
+        arr_patterns = [
+            r'\$[\d,]+(?:\.\d{2})?[km]?\s*(?:arr|acv)',  # $50k arr
+            r'[\d,]+[km]?\s*(?:arr|acv)',                 # 50k arr
+            r'(?:arr|acv)\s*(?:of|:)?\s*\$?[\d,]+[km]?',  # arr of $50k, acv: 100k
+        ]
+
+        arr_amounts = []
+        for pattern in arr_patterns:
+            matches = re.findall(pattern, content)
+            arr_amounts.extend(matches)
+
+        if not arr_amounts:
+            # No explicit ARR/ACV amounts found - pass through
+            # (non-ARR dollar amounts like travel budgets are ignored)
+            if any(term in content for term in ['arr', 'acv', 'annual recurring']):
+                logger.warning(
+                    "pareto_filter.arr_not_verified",
+                    directive_id=directive.id,
+                    hint="ARR/ACV terms present but no numeric value found"
+                )
+            return True
+
+        # Parse and check all found ARR/ACV amounts
+        compliant_found = False
+        for amount in arr_amounts:
             try:
-                # Check for k/m suffix before stripping
                 multiplier = 1
                 if 'k' in amount:
                     multiplier = 1000
                 elif 'm' in amount:
                     multiplier = 1_000_000
 
-                # Parse amount - remove $, commas, k, m
-                clean = amount.replace('$', '').replace(',', '').replace('k', '').replace('m', '')
-                clean = ''.join(c for c in clean if c.isdigit() or c == '.')
+                clean = re.sub(r'[^\d.]', '', amount)
                 if clean:
                     value = float(clean) * multiplier
-                    found_any_amount = True
                     if value >= self.config.arr_floor_usd:
-                        return True  # Found compliant ARR
+                        compliant_found = True
                     else:
-                        # Found ARR below floor - reject
                         logger.info(
                             "pareto_filter.arr_below_floor",
                             directive_id=directive.id,
                             arr_found=value,
                             floor=self.config.arr_floor_usd
                         )
-                        return False
             except ValueError:
                 pass
 
-        # If no numeric amount found but content mentions ARR terms
-        if not found_any_amount and any(term in content.lower() for term in ['arr', 'annual', 'recurring']):
-            logger.warning(
-                "pareto_filter.arr_not_verified",
-                directive_id=directive.id,
-                hint="No numeric ARR value found"
-            )
+        # Accept if any explicitly labeled ARR/ACV meets floor
+        if compliant_found:
+            return True
 
-        return True
+        # Reject only if we found ARR/ACV amounts and none met floor
+        return False
 
     def _verify_acv_range(self, directive: WorkspaceDirective) -> bool:
         """Verify ACV is within $100K-$5M range for 270-day cycle."""

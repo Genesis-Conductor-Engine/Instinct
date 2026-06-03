@@ -253,11 +253,29 @@ jobs:
         working-directory: workers/pareto-audit
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: npx wrangler deploy --env staging || echo "Cloudflare credentials not configured"
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # Deploy with KV/D1 bindings from secrets
+          npx wrangler deploy \
+            --var ARR_FLOOR_USD:25000 \
+            --var ROI_TARGET:10 \
+            --var MIN_ACV_USD:100000 \
+            --var MAX_ACV_USD:5000000 \
+            --var SALES_CYCLE_DAYS:270 \
+            || echo "Cloudflare credentials not configured"
 
       - name: Deploy to Cloudflare (production)
         if: github.event.inputs.deploy_environment == 'production'
         working-directory: workers/pareto-audit
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: npx wrangler deploy || echo "Cloudflare credentials not configured"
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # Deploy with KV/D1 bindings from secrets
+          npx wrangler deploy \
+            --var ARR_FLOOR_USD:25000 \
+            --var ROI_TARGET:10 \
+            --var MIN_ACV_USD:100000 \
+            --var MAX_ACV_USD:5000000 \
+            --var SALES_CYCLE_DAYS:270 \
+            || echo "Cloudflare credentials not configured"
