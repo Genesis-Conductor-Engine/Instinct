@@ -152,6 +152,24 @@ async function handleBatchAudit(request: Request, env: Env, headers: Record<stri
   }
 
   const { opportunities }: { opportunities: PipelineOpportunity[] } = await request.json();
+
+  // Guard against empty array to avoid NaN from division by zero
+  if (!opportunities || opportunities.length === 0) {
+    return new Response(JSON.stringify({
+      results: [],
+      summary: {
+        total: 0,
+        approved: 0,
+        rejected: 0,
+        escalated: 0,
+        compliance_rate: 1.0,
+        avg_roi: 0,
+      }
+    }), {
+      headers: { 'Content-Type': 'application/json', ...headers },
+    });
+  }
+
   const results = opportunities.map(opp => auditOpportunity(opp, env));
 
   // Store results in parallel
@@ -213,7 +231,7 @@ function auditOpportunity(opportunity: PipelineOpportunity, env: Env): AuditResu
 
   // Calculate estimated ROI (simplified model)
   const estimatedCost = opportunity.acv_usd * 0.05; // 5% of ACV as sales cost
-  const roiEstimate = opportunity.acv_usd / estimatedCost;
+  const roiEstimate = estimatedCost > 0 ? opportunity.acv_usd / estimatedCost : 0;
 
   if (roiEstimate < roiTarget) {
     violations.push(`ROI estimate ${roiEstimate.toFixed(1)}:1 below ${roiTarget}:1 target`);
@@ -298,9 +316,9 @@ async function handleMetrics(request: Request, env: Env, headers: Record<string,
       escalated: stats?.escalated ?? 0,
     },
     roi: {
-      average: stats?.avg_roi ?? 0,
+      average: (stats?.avg_roi as number) ?? 0,
       target: parseInt(env.ROI_TARGET),
-      meets_target: (stats?.avg_roi ?? 0) >= parseInt(env.ROI_TARGET),
+      meets_target: ((stats?.avg_roi as number) ?? 0) >= parseInt(env.ROI_TARGET),
     },
     config: {
       arr_floor: parseInt(env.ARR_FLOOR_USD),

@@ -21,6 +21,22 @@ from .thermodynamic_kernel import ThermodynamicKernel, ThermodynamicState
 
 logger = structlog.get_logger(__name__)
 
+# Slack notifier (lazy import to keep dependency optional)
+_slack_notifier = None
+
+
+def _get_slack_notifier() -> Optional[Any]:
+    global _slack_notifier
+    if _slack_notifier is None:
+        try:
+            import os
+            from src.integrations.slack.notifier import SlackNotifier
+            if os.getenv("SLACK_WEBHOOK_URL") or os.getenv("SLACK_BOT_TOKEN"):
+                _slack_notifier = SlackNotifier()
+        except ImportError:
+            pass
+    return _slack_notifier
+
 
 @dataclass
 class OrchestratorConfig:
@@ -131,34 +147,74 @@ class ParetoAuditFilter:
         return True
 
     def _verify_arr_floor(self, directive: WorkspaceDirective) -> bool:
-        """Verify $25k Year 1 ARR floor."""
-        content = directive.content
+        """Verify $25k Year 1 ARR floor.
 
-        # Look for dollar amounts
+        Returns True if:
+        - A numeric ARR >= floor is found
+        - No numeric ARR is found (can't verify, allow through with warning)
+
+        Returns False if:
+        - An explicitly labeled ARR/ACV amount < floor is found
+        """
+        content = directive.content.lower()
+
         import re
-        amounts = re.findall(r'\$[\d,]+(?:\.\d{2})?|[\d,]+k?\s*(?:arr|acv)', content.lower())
 
-        for amount in amounts:
+        # Only match amounts explicitly tied to ARR/ACV labels
+        # Pattern: "$50k arr", "25000 acv", "$100,000 arr", "arr of $50k", "acv: $100k"
+        arr_patterns = [
+            r'\$[\d,]+(?:\.\d{2})?[km]?\s*(?:arr|acv)',  # $50k arr
+            r'[\d,]+[km]?\s*(?:arr|acv)',                 # 50k arr
+            r'(?:arr|acv)\s*(?:of|:)?\s*\$?[\d,]+[km]?',  # arr of $50k, acv: 100k
+        ]
+
+        arr_amounts = []
+        for pattern in arr_patterns:
+            matches = re.findall(pattern, content)
+            arr_amounts.extend(matches)
+
+        if not arr_amounts:
+            # No explicit ARR/ACV amounts found - pass through
+            # (non-ARR dollar amounts like travel budgets are ignored)
+            if any(term in content for term in ['arr', 'acv', 'annual recurring']):
+                logger.warning(
+                    "pareto_filter.arr_not_verified",
+                    directive_id=directive.id,
+                    hint="ARR/ACV terms present but no numeric value found"
+                )
+            return True
+
+        # Parse and check all found ARR/ACV amounts
+        compliant_found = False
+        for amount in arr_amounts:
             try:
-                # Parse amount
-                clean = amount.replace('$', '').replace(',', '').replace('k', '000')
-                clean = ''.join(c for c in clean if c.isdigit() or c == '.')
+                multiplier = 1
+                if 'k' in amount:
+                    multiplier = 1000
+                elif 'm' in amount:
+                    multiplier = 1_000_000
+
+                clean = re.sub(r'[^\d.]', '', amount)
                 if clean:
-                    value = float(clean)
+                    value = float(clean) * multiplier
                     if value >= self.config.arr_floor_usd:
-                        return True
+                        compliant_found = True
+                    else:
+                        logger.info(
+                            "pareto_filter.arr_below_floor",
+                            directive_id=directive.id,
+                            arr_found=value,
+                            floor=self.config.arr_floor_usd
+                        )
             except ValueError:
                 pass
 
-        # If no amount found but content suggests compliance
-        if any(term in content.lower() for term in ['arr', 'annual', 'recurring']):
-            logger.warning(
-                "pareto_filter.arr_not_verified",
-                directive_id=directive.id,
-                hint="No numeric ARR value found"
-            )
+        # Accept if any explicitly labeled ARR/ACV meets floor
+        if compliant_found:
+            return True
 
-        return True  # Allow through if no explicit violation
+        # Reject only if we found ARR/ACV amounts and none met floor
+        return False
 
     def _verify_acv_range(self, directive: WorkspaceDirective) -> bool:
         """Verify ACV is within $100K-$5M range for 270-day cycle."""
@@ -554,6 +610,7 @@ class WorkspaceOrchestrator:
         Perform Yennefer hourly sync.
 
         Synchronizes all workspace inputs with Instinct Platform telemetry.
+        Posts results to Slack.
         """
         logger.info("orchestrator.yennefer_sync_started")
 
@@ -576,7 +633,25 @@ class WorkspaceOrchestrator:
             pipeline_value=self._state.estimated_pipeline_value_usd
         )
 
+        # Post to Slack
+        slack = _get_slack_notifier()
+        if slack:
+            try:
+                await slack.post_sync_report(report)
+            except Exception as e:
+                logger.warning("orchestrator.slack_post_failed", error=str(e))
+
         return report
+
+    async def post_compliance_alert(
+        self,
+        directive_id: str,
+        violations: list[str],
+    ) -> None:
+        """Post a PSF compliance violation to Slack."""
+        slack = _get_slack_notifier()
+        if slack:
+            await slack.post_compliance_alert(directive_id, violations)
 
 
 async def main():

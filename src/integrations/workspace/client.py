@@ -155,7 +155,7 @@ class GoogleWorkspaceClient:
 
     async def _run_in_executor(self, func: Any, *args) -> Any:
         """Run synchronous Google API call in executor."""
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, func, *args)
 
     async def get_emails(
@@ -339,8 +339,7 @@ Cognitive recovery protocols active""",
 
         except Exception as e:
             logger.error("workspace_client.get_tasks_failed", error=str(e))
-            # Return mock data on failure
-            return self._get_mock_tasks()
+            return []
 
     def _get_mock_tasks(self) -> list[dict]:
         """Return mock tasks for development."""
