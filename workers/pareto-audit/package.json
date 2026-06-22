@@ -13,12 +13,12 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240117.0",
-    "@typescript-eslint/eslint-plugin": "^6.19.0",
-    "@typescript-eslint/parser": "^6.19.0",
-    "eslint": "^8.56.0",
+    "@typescript-eslint/eslint-plugin": "^8.61.1",
+    "@typescript-eslint/parser": "^8.61.1",
+    "eslint": "^10.5.0",
     "typescript": "^5.3.3",
-    "vitest": "^1.2.0",
-    "wrangler": "^3.25.0"
+    "vitest": "^4.1.9",
+    "wrangler": "^4.103.0"
   },
   "keywords": [
     "cloudflare-workers",
