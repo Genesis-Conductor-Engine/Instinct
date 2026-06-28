@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0",
+  "record_type": "mcp_registry",
+  "servers": [
+    {"name": "drp-daf-allocator", "schema": "mcp-servers/drp-daf-allocator/drp-daf-allocator.json"},
+    {"name": "genesis-alpha-mcp", "schema": "mcp-servers/genesis-alpha-mcp/mcp.json"}
+  ]
+}
