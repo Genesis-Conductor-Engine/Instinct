@@ -1,0 +1,13 @@
+{
+  "name": "drp-daf-allocator",
+  "version": "0.2.0",
+  "runtime": "node-stdio",
+  "entrypoint": "mcp-servers/drp-daf-allocator/scripts/drp-daf-allocator.mjs",
+  "tools": ["fetch_workspace_state", "feed_to_k_graph", "synthesize_proposal", "update_status_ledger", "close_ouroboros_cycle"],
+  "ouroborosCycle": ["poll_state", "kgraph_mapping", "deficit_calculation", "synthesize_gaps", "ledger_update", "close_and_prune"],
+  "launchGates": [
+    "node mcp-servers/drp-daf-allocator/scripts/drp-daf-allocator.mjs",
+    "python -m pytest tests/mcp/test_mcp_ouroboros.py"
+  ],
+  "invariants": ["order_independent_sha256_state_hashing", "digraph_subgraph_isomorphism", "no_fuzzy_matching", "evt_records_on_stderr"]
+}

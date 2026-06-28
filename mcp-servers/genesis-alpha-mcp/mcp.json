@@ -1,0 +1,12 @@
+{
+  "name": "genesis-alpha-mcp",
+  "version": "0.1.0-alpha",
+  "runtime": "podman-python",
+  "entrypoint": "mcp-servers/genesis-alpha-mcp/alpha_mcp_server/main.py",
+  "podmanRun": "podman run --rm -e YOLO_MODE=false -e ALPHA_TRACE_DB=/app/data/alpha_traces.db -v ./backend/data:/app/data genesis-alpha-mcp:0.1.0-alpha",
+  "tools": ["fetch_workspace_state", "feed_to_k_graph", "log_alpha_trace", "trigger_yolo_swarm"],
+  "ouroborosCycle": ["poll_state", "kgraph_mapping", "deficit_calculation", "synthesize_gaps", "ledger_update", "close_and_prune"],
+  "healthcheck": "python3 mcp-servers/genesis-alpha-mcp/alpha_mcp_server/main.py healthcheck",
+  "proofOfThoughtVerification": true,
+  "yoloGate": ["YOLO_MODE=true", "x-yolo-override", "x-alpha-token"]
+}
