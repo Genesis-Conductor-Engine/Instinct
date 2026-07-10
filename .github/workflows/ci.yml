@@ -181,44 +181,54 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         
-      - name: Validate JSON files
-        run: |
-          for file in $(find . -name "*.json" -not -path "./node_modules/*" -not -path "./.git/*"); do
-            echo "Validating $file..."
-            python -m json.tool "$file" > /dev/null || exit 1
-          done
-          
-      - name: Validate YAML files
+      - name: Validate JSON and YAML files
         run: |
           pip install pyyaml
-          python -c "
-          import yaml
-          import sys
+          python - <<'PY'
+          import json, yaml, sys
           from pathlib import Path
-          
+
+          repo_root = Path('.')
           failed = False
-          for file in Path('.').rglob('*.yml'):
-              if '.git' not in str(file) and 'node_modules' not in str(file):
-                  try:
-                      with open(file) as f:
-                          yaml.safe_load(f)
-                      print(f'✓ {file}')
-                  except Exception as e:
-                      print(f'✗ {file}: {e}')
-                      failed = True
-                      
-          for file in Path('.').rglob('*.yaml'):
-              if '.git' not in str(file) and 'node_modules' not in str(file):
-                  try:
-                      with open(file) as f:
-                          yaml.safe_load(f)
-                      print(f'✓ {file}')
-                  except Exception as e:
-                      print(f'✗ {file}: {e}')
-                      failed = True
-                      
+
+          def ignore(path: Path) -> bool:
+              s = str(path)
+              return ('.git' in s) or ('node_modules' in s)
+
+          def validate_json(path: Path):
+              global failed
+              try:
+                  with open(path, 'r', encoding='utf-8') as fh:
+                      json.load(fh)
+                  print(f'✓ {path}')
+              except Exception as e:
+                  print(f'✗ {path}: {e}')
+                  failed = True
+
+          def validate_yaml(path: Path):
+              global failed
+              try:
+                  with open(path, 'r', encoding='utf-8') as fh:
+                      yaml.safe_load(fh)
+                  print(f'✓ {path}')
+              except Exception as e:
+                  print(f'✗ {path}: {e}')
+                  failed = True
+
+          for f in repo_root.rglob('*.json'):
+              if ignore(f):
+                  continue
+              validate_json(f)
+
+          for f in list(repo_root.rglob('*.yml')) + list(repo_root.rglob('*.yaml')):
+              if ignore(f):
+                  continue
+              validate_yaml(f)
+
+          if failed:
+              print('\nOne or more config files are invalid.')
           sys.exit(1 if failed else 0)
-          "
+          PY
 
   # Build status check - all jobs must pass
   ci-success:
