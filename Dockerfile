@@ -1,8 +1,11 @@
 # CVE Matter-Analysis OS - Docker Image
 # Multi-stage build for minimal production image
 
+# CUDA runtime stage argument (default: CUDA 12.4 on Ubuntu 22.04)
+ARG CUDA_IMAGE_TAG=12.4.1-runtime-ubuntu22.04
+
 # Build stage - build Python wheels once
-FROM python:3.11-slim AS builder
+FROM python:3.11-slim-bullseye AS builder
 
 WORKDIR /build
 
@@ -14,10 +17,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy requirements and install dependencies
 COPY requirements.txt .
-RUN pip wheel --no-cache-dir --wheel-dir /build/wheels -r requirements.txt
+RUN python -m pip install --upgrade pip && \
+    pip wheel --no-cache-dir --wheel-dir /build/wheels -r requirements.txt
 
-# CUDA runtime stage (default: CUDA 12.4 on Ubuntu 22.04)
-ARG CUDA_IMAGE_TAG=12.4.1-runtime-ubuntu22.04
+# CUDA runtime stage
 FROM nvidia/cuda:${CUDA_IMAGE_TAG} AS runtime
 
 ENV DEBIAN_FRONTEND=noninteractive \
